@@ -21,10 +21,23 @@ https://github.com/honza-kasik/meeting-summarizer
 
 Usnesení města jsou dlouhodobě publikována ve formě PDF dokumentů. Projekt tato data strukturuje a umožňuje fulltextové vyhledávání napříč jednotlivými roky a dokumenty.
 
+Vyhledávání nabízí filtr Téma a automaticky přiřazené tematické štítky.
+Kategorie pochází z klasifikátoru v datové pipeline; web model nespouští.
+Uvítací sekce Nevíte, kde začít? nabízí šest tematických zkratek,
+další kategorie, hledání podle místní části a přehled dostupných dat.
+Výběr tématu vymaže textový dotaz; výběr místa zruší tematický filtr a vyhledá
+název místa. Ostatní filtry zůstávají zachované. Uvítací sekce Nevíte, kde začít? se zobrazuje
+pouze bez textového dotazu a zvoleného tématu. Při hledání ji nahrazuje přehled
+aktivních filtrů; omezení lze jednotlivě zrušit. Podrobné volby otevírá tlačítko
+Upřesnit hledání. Vymazání dotazu i tématu vrátí uvítací sekci.
+Téma lze procházet i bez hledaného výrazu a sdílet pomocí URL parametru
+`category` (například `/usneseni/?category=transport`). Volba Bez zařazení
+zahrnuje dokumenty bez kategorie, například starší archiv a rozpočtová opatření.
+
 Výstupem jsou statické datové indexy, které lze dlouhodobě provozovat bez závislosti na serverové logice.
 
 Více informací:
-https://github.com/honza-kasik/usneseni-mesta
+https://github.com/litovle/usneseni-mesta
 
 === Svoz odpadu
 
@@ -46,3 +59,17 @@ Projekt si zachovává nekomerční a nepolitický charakter. Příspěvky by m�
 ale jeho zpřehlednění a dlouhodobá dostupnost.
 
 Projekt a veškeré odkazované projekty jsou vedeny transparentně a veškeré změny jsou veřejně dohledatelné v historii konkrétního repozitáře.
+
+== Ověření vyhledávání
+
+Regresní testy filtru témat, URL a výběru dokumentů používají vestavěný Node.js
+test runner bez dalších závislostí:
+
+[source,shell]
+----
+node --check usneseni/app.js
+node --test tests/usneseni-topics.test.cjs
+----
+
+Datové exporty a front matter stránek vznikají v `usneseni-mesta`; ruční úpravy
+vygenerovaných kategorií při dalším běhu pipeline přepíše export.

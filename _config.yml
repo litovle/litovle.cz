@@ -6,3 +6,6 @@ baseurl: ""
 markdown: kramdown
 theme: null
 permalink: pretty
+
+exclude:
+  - tests
