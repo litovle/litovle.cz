@@ -30,6 +30,11 @@ layout: default
         <div class="usneseni-meta">
             <div><strong>Orgán:</strong> {{ page.organ }}</div>
             <div><strong>Datum:</strong> {{ page.datum | date: "%-d. %-m. %Y" }}</div>
+            {% if page.classification_category %}
+            <div><strong>Téma (automaticky):</strong>
+              <a href="{{ '/usneseni/' | relative_url }}?category={{ page.classification_category | url_encode }}&amp;y={{ year }}">{{ page.classification_label | escape }}</a>
+            </div>
+            {% endif %}
         </div>
     </header>
 

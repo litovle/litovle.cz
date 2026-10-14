@@ -11,13 +11,13 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
 </p>
 
 <style>
+
 .usn-app {
   display: grid;
   gap: 1.25rem;
 }
 
-.usn-app.is-booting .usn-search-panel,
-.usn-app.is-booting .usn-start {
+.usn-app.is-booting .usn-search-panel {
   opacity: .72;
 }
 
@@ -161,7 +161,6 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
 .usn-search-panel input[type="search"]:disabled,
 .usn-search-clear:disabled,
 .usn-refine-toggle:disabled,
-.usn-chip:disabled,
 .usn-sort-chip:disabled,
 .usn-filter-options input:disabled + span {
   cursor: not-allowed;
@@ -174,14 +173,12 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
 
 .usn-search-clear:disabled,
 .usn-refine-toggle:disabled,
-.usn-chip:disabled,
 .usn-sort-chip:disabled {
   opacity: .6;
   box-shadow: none;
 }
 
-.usn-refine-toggle,
-.usn-start-toggle {
+.usn-refine-toggle {
   white-space: nowrap;
 }
 
@@ -274,6 +271,41 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
   display: none;
 }
 
+#usn-topic-group[hidden] { display: none; }
+
+#usn-topic {
+  max-width: 100%;
+  padding: .5rem .65rem;
+  border: 1px solid rgba(57, 79, 61, 0.2);
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2b22;
+  font: inherit;
+}
+
+#usn-topic:focus-visible { outline: 2px solid #2f5a41; outline-offset: 2px; }
+
+#usn-topic-note { margin-top: .35rem; color: #667168; }
+
+.usn-head { flex-wrap: wrap; }
+.usn-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .4em;
+  max-width: 100%;
+}
+.usn-topic-label {
+  display: inline-block;
+  padding: .08em .45em;
+  border: 1px solid #dce7dc;
+  border-radius: 999px;
+  background: #f3f6f3;
+  color: #526154;
+  font-size: .78em;
+  overflow-wrap: anywhere;
+}
+
 .usn-search-panel.is-open .usn-controls {
   display: flex;
 }
@@ -321,19 +353,6 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
   background: #254b35;
 }
 
-.usn-start-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  border: 0;
-  padding: 0;
-  background: none;
-  color: #36513b;
-  font: inherit;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
 .usn-results-panel {
   display: grid;
   gap: .75rem;
@@ -369,13 +388,6 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
 .usn-results-kicker {
   color: #5a645d;
   font-size: .92rem;
-}
-
-.usn-results-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  margin-left: auto;
 }
 
 .usn-empty-state {
@@ -452,124 +464,8 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
   margin-top: .25rem;
 }
 
-.usn-start {
-  display: grid;
-  gap: 1rem;
-  overflow: hidden;
-  max-height: 1600px;
-  opacity: 1;
-  transform: translateY(0);
-  transition: max-height .28s ease, opacity .22s ease, transform .22s ease, margin .22s ease;
-}
-
-.usn-start.is-collapsed {
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-10px);
-  margin: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.usn-start[hidden],
 .usn-results-panel[hidden] {
   display: none !important;
-}
-
-.usn-start-hero {
-  background: linear-gradient(135deg, #f7f2e8 0%, #eef5ef 100%);
-  border: 1px solid rgba(74, 93, 75, 0.18);
-  border-radius: 22px;
-  padding: 1.5rem;
-  box-shadow: 0 16px 40px rgba(53, 61, 54, 0.08);
-}
-
-.usn-start-kicker {
-  display: inline-block;
-  margin-bottom: .5rem;
-  padding: .3rem .6rem;
-  border-radius: 999px;
-  background: rgba(67, 90, 71, 0.10);
-  color: #36513b;
-  font-size: .85rem;
-  font-weight: 600;
-  letter-spacing: .01em;
-}
-
-.usn-start-hero h2,
-.usn-start-section h3 {
-  margin: 0 0 .5rem;
-}
-
-.usn-start-hero p,
-.usn-start-section p {
-  margin: 0;
-}
-
-.usn-start-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-
-.usn-start-section {
-  background: #fff;
-  border: 1px solid rgba(74, 93, 75, 0.12);
-  border-radius: 18px;
-  padding: 1.1rem 1rem;
-}
-
-.usn-chip-list,
-.usn-start-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .6rem;
-  margin-top: .9rem;
-}
-
-.usn-chip {
-  border: 0;
-  border-radius: 999px;
-  padding: .55rem .85rem;
-  background: #2f5a41;
-  color: #fff;
-  font: inherit;
-  cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-  box-shadow: 0 8px 18px rgba(47, 90, 65, 0.18);
-}
-
-.usn-chip:hover,
-.usn-chip:focus-visible {
-  transform: translateY(-1px);
-  background: #254b35;
-}
-
-.usn-chip-secondary {
-  background: #eef3ef;
-  color: #24412e;
-  box-shadow: none;
-}
-
-.usn-chip-secondary:hover,
-.usn-chip-secondary:focus-visible {
-  background: #dde9df;
-}
-
-.usn-start-links a {
-  display: inline-flex;
-  align-items: center;
-  gap: .35rem;
-  padding: .55rem .8rem;
-  border-radius: 999px;
-  background: #f5f2ea;
-  color: #574c31;
-  text-decoration: none;
-}
-
-.usn-start-links a:hover,
-.usn-start-links a:focus-visible {
-  background: #ece5d7;
 }
 
 .usn-source-note {
@@ -579,13 +475,14 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
 }
 
 @media (max-width: 700px) {
-  .usn-back-to-top {
+
+.usn-back-to-top {
     right: 50%;
     bottom: .85rem;
     transform: translateX(50%) translateY(10px);
   }
 
-  .usn-back-to-top.is-visible {
+.usn-back-to-top.is-visible {
     transform: translateX(50%) translateY(0);
   }
 
@@ -600,12 +497,12 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
     font-size: .98rem;
   }
 
-  .usn-results-jump {
+.usn-results-jump {
     display: inline-flex;
     align-items: center;
   }
 
-  .usn-search-panel {
+.usn-search-panel {
     position: static;
     padding: 0;
     border: 0;
@@ -615,23 +512,115 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
     backdrop-filter: none;
   }
 
-  .usn-search-panel input[type="search"] {
+.usn-search-panel input[type="search"] {
     position: static;
     padding-right: 3.5rem;
   }
 
-  .usn-controls {
+.usn-controls {
     display: none;
   }
 
-  .usn-search-panel.is-open .usn-controls {
+.usn-search-panel.is-open .usn-controls {
     display: grid;
   }
-
-  .usn-start-hero {
-    padding: 1.1rem;
-  }
 }
+.usn-welcome[hidden],
+.usn-welcome [hidden] { display: none; }
+.usn-welcome-content { display: grid; gap: 1rem; margin-top: .6rem; }
+.usn-welcome-hero {
+  padding: 1.5rem;
+  border: 1px solid rgba(74, 93, 75, .18);
+  border-radius: 22px;
+  background: linear-gradient(135deg, #f7f2e8 0%, #eef5ef 100%);
+  box-shadow: 0 16px 40px rgba(53, 61, 54, .08);
+}
+.usn-welcome-kicker {
+  display: inline-block;
+  margin-bottom: .65rem;
+  padding: .3rem .6rem;
+  border-radius: 999px;
+  background: rgba(67, 90, 71, .1);
+  color: #36513b;
+  font-size: .85rem;
+  font-weight: 600;
+}
+.usn-welcome-hero h2 { margin: 0 0 .7rem; font-size: 1.6rem; line-height: 1.25; }
+.usn-welcome-hero p { margin: 0; max-width: 58ch; line-height: 1.55; }
+.usn-welcome-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.usn-welcome-card {
+  padding: 1.1rem;
+  border: 1px solid rgba(74, 93, 75, .12);
+  border-radius: 18px;
+  background: #fff;
+}
+.usn-welcome-card h3 { margin: 0 0 .5rem; }
+.usn-welcome-card p { margin: 0; line-height: 1.5; }
+.usn-welcome-links { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .9rem; }
+.usn-welcome-links a { color: #36513b; }
+.usn-more-topics { margin-top: 1rem; }
+.usn-more-topics summary { color: #36513b; cursor: pointer; width: fit-content; }
+.usn-place-button {
+  padding: .4rem .7rem;
+  border: 1px solid rgba(57, 79, 61, .16);
+  border-radius: 999px;
+  background: #eef3ef;
+  color: #294132;
+  font: inherit;
+  cursor: pointer;
+}
+.usn-place-button:hover { background: #dde9df; }
+.usn-place-button:focus-visible,
+.usn-welcome summary:focus-visible { outline: 2px solid #2f5a41; outline-offset: 3px; }
+@media (max-width: 700px) {
+  .usn-welcome-hero { padding: 1.1rem; }
+  .usn-welcome-hero h2 { font-size: 1.35rem; }
+  .usn-welcome-grid { grid-template-columns: 1fr; }
+}
+.usn-topic-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+.usn-topic-button {
+  padding: .4rem .7rem;
+  border: 1px solid rgba(57, 79, 61, .16);
+  border-radius: 999px;
+  background: #eef3ef;
+  color: #294132;
+  font: inherit;
+  cursor: pointer;
+}
+#usn-topic-buttons .usn-topic-button { background: #2f5a41; border-color: #2f5a41; color: #fff; }
+#usn-topic-buttons .usn-topic-button:hover { background: #254b35; }
+.usn-topic-button:hover { background: #dde9df; }
+.usn-topic-button[aria-pressed="true"] {
+  background: #2f5a41;
+  border-color: #2f5a41;
+  color: #fff;
+}
+.usn-topic-button:focus-visible,
+.usn-welcome summary:focus-visible {
+  outline: 2px solid #2f5a41;
+  outline-offset: 3px;
+}
+.usn-active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; }
+.usn-active-filters[hidden] { display: none; }
+.usn-active-filter {
+  display: inline-flex;
+  padding: .3rem .65rem;
+  border: 1px solid #cbd9cd;
+  border-radius: 999px;
+  background: #eef3ef;
+  color: #294132;
+  font: inherit;
+  font-size: .88rem;
+  cursor: pointer;
+}
+.usn-active-filter:hover { background: #dde9df; }
+.usn-active-filter:focus-visible { outline: 2px solid #2f5a41; outline-offset: 2px; }
+.usn-filter-scope { color: #667168; font-size: .88rem; }
 </style>
 
 <div class="usn-app is-booting">
@@ -641,9 +630,15 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
       <button type="button" id="usn-clear" class="usn-search-clear" aria-label="Vymazat hledání" data-usn-boot disabled hidden>&times;</button>
     </div>
     <div id="usn-boot-status" class="usn-boot-status" aria-live="polite">Načítám vyhledávání…</div>
-    <button type="button" id="usn-refine-toggle" class="usn-refine-toggle" data-usn-boot disabled>Upřesnit podle roku a typu</button>
+    <button type="button" id="usn-refine-toggle" class="usn-refine-toggle" aria-controls="usn-filter-controls" aria-expanded="false" data-usn-boot disabled>Upřesnit hledání</button>
 
-    <div class="usn-controls">
+    <div id="usn-active-filters" class="usn-active-filters" aria-label="Aktivní filtry" hidden></div>
+    <div class="usn-controls" id="usn-filter-controls">
+      <div id="usn-topic-group" class="usn-filter-group" hidden>
+        <label class="usn-filter-label" for="usn-topic">Téma</label>
+        <select id="usn-topic" aria-describedby="usn-topic-note" data-usn-boot disabled></select>
+        <small id="usn-topic-note">Téma je přiřazené automaticky.</small>
+      </div>
       <div class="usn-filter-group">
         <div class="usn-filter-label">Roky</div>
         <div class="usn-years-wrap">
@@ -694,57 +689,53 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
     </div>
   </div>
 
-  <div id="usn-start" class="usn-start">
-    <section class="usn-start-hero">
-      <span class="usn-start-kicker">Co se ve městě řeší</span>
-      <h2>Najděte usnesení podle tématu, místa nebo služby</h2>
-      <p>
-        Vyhledávání je dobré, když víte co hledat. Začněte některým z témat níže
-        nebo si otevřete to, co se týká vaší části města.
-      </p>
-      <div class="usn-chip-list">
-        <button type="button" class="usn-chip" data-queries="škola" data-usn-boot disabled>Školy a školky</button>
-        <button type="button" class="usn-chip" data-queries="chodník|silnice" data-usn-boot disabled>Doprava a chodníky</button>
-        <button type="button" class="usn-chip" data-queries="sport|hala|sokolovna" data-usn-boot disabled>Sport a kultura</button>
-        <button type="button" class="usn-chip" data-queries="Unčovice|Nasobůrky|Myslechovice|Chořelice|Nová Ves" data-usn-boot disabled>Místní části</button>
-        <button type="button" class="usn-chip" data-queries="dotace" data-usn-boot disabled>Dotace a dary</button>
-        <button type="button" class="usn-chip" data-queries="odpad" data-usn-boot disabled>Odpady a zeleň</button>
+  <section id="usn-topics" class="usn-welcome" aria-labelledby="usn-welcome-title" hidden>
+    <div class="usn-welcome-content">
+      <section class="usn-welcome-hero" aria-labelledby="usn-welcome-title">
+        <span class="usn-welcome-kicker">Nevíte, kde začít?</span>
+        <h2 id="usn-welcome-title">Podívejte se, co město řeší ve vašem okolí.</h2>
+        <p>Školy, chodníky, sport i vaše místní část. Vyberte si téma nebo místo a najděte usnesení, která vás zajímají.</p>
+        <div id="usn-welcome-topic-choices" hidden>
+          <div id="usn-topic-buttons" class="usn-topic-buttons" role="group" aria-label="Oblíbená témata"></div>
+          <details id="usn-more-topics" class="usn-more-topics">
+            <summary>Další témata</summary>
+            <div id="usn-extra-topic-buttons" class="usn-topic-buttons" role="group" aria-label="Další témata"></div>
+          </details>
+        </div>
+      </section>
+      <div class="usn-welcome-grid">
+        <section class="usn-welcome-card">
+          <h3>Hledejte podle místa</h3>
+          <p>Podívejte se, co se týká vaší části města.</p>
+          <div class="usn-topic-buttons" role="group" aria-label="Hledat podle místa">
+            <button type="button" class="usn-place-button" data-place="Litovel" data-usn-boot disabled>Litovel</button>
+            <button type="button" class="usn-place-button" data-place="Unčovice" data-usn-boot disabled>Unčovice</button>
+            <button type="button" class="usn-place-button" data-place="Nasobůrky" data-usn-boot disabled>Nasobůrky</button>
+            <button type="button" class="usn-place-button" data-place="Myslechovice" data-usn-boot disabled>Myslechovice</button>
+            <button type="button" class="usn-place-button" data-place="Chořelice" data-usn-boot disabled>Chořelice</button>
+            <button type="button" class="usn-place-button" data-place="Nová Ves" data-usn-boot disabled>Nová Ves</button>
+          </div>
+        </section>
+        <section id="usn-data-overview" class="usn-welcome-card" hidden>
+          <h3>V datech najdete</h3>
+          <p><strong id="usn-total-resolutions"></strong> usnesení a <strong id="usn-total-budget-docs"></strong> rozpočtových opatření v aktuální datové sadě.</p>
+          <div class="usn-welcome-links">
+            <a id="usn-latest-year-link" href="/usneseni/">Nejnovější rok</a>
+            <a href="/rozpoctova-opatreni/">Rozpočtová opatření</a>
+            <a href="/usneseni/archiv/">Archiv usnesení</a>
+          </div>
+        </section>
       </div>
-    </section>
-
-    <div class="usn-start-grid">
-      <section class="usn-start-section">
-        <h3>Hledejte podle místa</h3>
-        <p>Otevřete si přímo to, co se týká vaší části města nebo školy.</p>
-        <div class="usn-chip-list">
-          <button type="button" class="usn-chip usn-chip-secondary" data-query="Litovel" data-usn-boot disabled>Litovel</button>
-          <button type="button" class="usn-chip usn-chip-secondary" data-query="Unčovice" data-usn-boot disabled>Unčovice</button>
-          <button type="button" class="usn-chip usn-chip-secondary" data-query="Nasobůrky" data-usn-boot disabled>Nasobůrky</button>
-          <button type="button" class="usn-chip usn-chip-secondary" data-query="Myslechovice" data-usn-boot disabled>Myslechovice</button>
-          <button type="button" class="usn-chip usn-chip-secondary" data-query="Chořelice" data-usn-boot disabled>Chořelice</button>
-          <button type="button" class="usn-chip usn-chip-secondary" data-query="Nová Ves" data-usn-boot disabled>Nová Ves</button>
-        </div>
-      </section>
-
-      <section class="usn-start-section">
-        <h3>V datech najdete</h3>
-        <p><span id="usn-total-resolutions">…</span> usnesení a <span id="usn-total-budget-docs">…</span> rozpočtových opatření v aktuálním období.</p>
-        <div class="usn-start-links">
-          <a id="usn-latest-year-link" href="/usneseni/">Nejnovější rok</a>
-          <a href="/rozpoctova-opatreni/">Rozpočtová opatření</a>
-          <a href="/usneseni/archiv/">Archiv usnesení</a>
-        </div>
-      </section>
     </div>
-  </div>
+  </section>
+
   <section id="usn-results-panel" class="usn-results-panel" hidden>
     <div class="usn-results-head">
       <h2>Výsledky</h2>
       <div class="usn-results-meta">
-        <div id="usn-results-count" class="usn-results-count"></div>
+        <div id="usn-results-count" class="usn-results-count" aria-live="polite" aria-atomic="true"></div>
         <div id="usn-results-kicker" class="usn-results-kicker"></div>
       </div>
-      <div id="usn-results-actions" class="usn-results-actions"></div>
     </div>
     <ul id="usn-results" class="usn-results"></ul>
   </section>
