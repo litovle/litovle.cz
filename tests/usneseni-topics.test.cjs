@@ -5,16 +5,22 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 // Exercise the existing browser functions with fixture data and URL state.
-function app(category = "", query = "") {
+function app(category = "", query = "", fixtureRecords = null) {
   const nodes = new Map();
+  const events = {};
+  const classes = new Set();
+  const panel = {classList: {
+    toggle: (name, enabled) => enabled ? classes.add(name) : classes.delete(name),
+    contains: name => classes.has(name),
+  }};
   function node(id) {
-    if (!nodes.has(id)) nodes.set(id, {value: "", hidden: false, focus: () => {}, replaceChildren: function() {this.children = [];}, appendChild: function(child) {this.children.push(child);}, querySelectorAll: () => []});
+    if (!nodes.has(id)) nodes.set(id, {value: "", hidden: false, children: [], setAttribute: function(k, v) {this[k] = v;}, addEventListener: function(k, fn) {this[k] = fn;}, focus: () => {}, replaceChildren: function() {this.children = [];}, appendChild: function(child) {this.children.push(child);}, querySelectorAll: () => []});
     return nodes.get(id);
   }
   node("usn-topic").value = category;
   node("usn-sort").value = "desc";
   node("usn-q").value = query;
-  const records = [
+  const records = fixtureRecords || [
     {id: "RM/1/1/2026", organ: "RM", datum: "2026-01-01", subject: "oprava chodniku", classification: {category: "transport"}},
     {id: "RM/2/1/2026", organ: "RM", datum: "2026-02-01", subject: "kulturni akce", classification: {category: "culture"}},
     {id: "RO/1/2026", organ: "RM", approval_date: "2026-03-01", notes: []},
@@ -25,15 +31,17 @@ function app(category = "", query = "") {
     "/assets/usneseni/meta.json": {2026: {count: 2}},
     "/assets/usneseni/ro/meta.json": {2026: {count: 1}},
     "/assets/usneseni/archive/meta.json": {2026: {count: 1}},
-    "/assets/usneseni/data/2026.json": records.slice(0, 2),
+    "/assets/usneseni/data/2026.json": records.filter(r => !r.id.startsWith("RO/") && !r.type?.startsWith("archive_")),
     "/assets/usneseni/index/2026.json": {chodniku: [records[0].id], kulturni: [records[1].id]},
-    "/assets/usneseni/ro/data/2026.json": [records[2]],
-    "/assets/usneseni/archive/data/2026.json": [records[3]],
+    "/assets/usneseni/ro/data/2026.json": records.filter(r => r.id.startsWith("RO/")),
+    "/assets/usneseni/archive/data/2026.json": records.filter(r => r.type?.startsWith("archive_")),
   };
   const context = vm.createContext({
-    document: {getElementById: node, querySelector: () => null, createElement: () => ({dataset: {}, setAttribute: function(name, value) {this[name] = value;}})},
+    UsneseniOutcomes: require("../usneseni/outcomes.js"),
+    document: {createDocumentFragment: () => ({appendChild: () => {}}), getElementById: node, querySelector: selector => selector === ".usn-search-panel" ? panel : null, createElement: () => ({dataset: {}, setAttribute: function(name, value) {this[name] = value;}})},
     location: {pathname: "/usneseni/", search: "", hash: ""},
     history: {replaceState: (_, __, url) => {context.location.search = url;}},
+    window: {innerWidth: 390, addEventListener: (name, fn) => {events[name] = fn;}},
     URLSearchParams, URL, console, setTimeout, clearTimeout,
     fetch: async url => {requests.push(url); return {ok: true, json: async () => payloads[url] || {}};},
   });
@@ -46,9 +54,9 @@ function app(category = "", query = "") {
     YEAR_INPUTS = [{value: "2026", checked: true}];
     TYPE_INPUTS = [{value: "usneseni", checked: true}, {value: "ro", checked: true}];
     ORG_INPUTS = [{value: "Rada města Litovel", checked: true}, {value: "Zastupitelstvo města Litovel", checked: true}];
-    globalThis.api = {loadYear,
+    globalThis.api = {loadYear, setFiltersOpen, bindUiEvents, truncatePreview, renderResolutionPreview, search, searchWithOpenFilters,
       sources: (resolutions, budgets, archive) => {META = resolutions; RO_META = budgets; ARCHIVE_META = archive;},
-      findResults, parseQuery, updateUrl, loadFromUrl, filtersAreDefault,
+      findResults, parseQuery, updateUrl, loadFromUrl, filtersAreDefault, selectedOutcome, browseOutcome,
       paginate, renderResultCard, selectedTopic, loadMeta, renderWelcomeOverview, filterSummary, updateSearchPresentation,
       shortcut: async (category, place = false) => {
         const original = search;
@@ -69,7 +77,7 @@ function app(category = "", query = "") {
       setPage: n => {PAGE = n;}, setOrg: () => {ORG_INPUTS[0].checked = false;}};
   `);
   vm.runInContext(source, context);
-  return {api: context.api, context, node, requests};
+  return {api: context.api, context, node, requests, panel, events};
 }
 
 function ids(rows) {return Array.from(rows, row => row.id);}
@@ -250,4 +258,203 @@ test("year loading requests only the datasets advertised in metadata", async () 
     await api.loadYear("2026");
     assert.deepEqual(requests, expected);
   }
+});
+
+
+test("filter disclosure labels and cached return preserve the search", () => {
+  const {api, node, context, panel, events} = app("transport", "chodniku");
+  api.updateUrl();
+  const url = context.location.search;
+  api.bindUiEvents();
+  node("usn-refine-toggle").click();
+  assert.equal(panel.classList.contains("is-open"), true);
+  assert.equal(node("usn-refine-toggle")["aria-expanded"], "true");
+  assert.equal(node("usn-refine-toggle").textContent, "Skrýt upřesnění");
+  node("usn-refine-toggle").click();
+  assert.equal(node("usn-refine-toggle").textContent, "Upřesnit hledání");
+  api.setFiltersOpen(true);
+  events.pageshow({persisted: true});
+  assert.equal(panel.classList.contains("is-open"), false);
+  assert.equal(node("usn-refine-toggle")["aria-expanded"], "false");
+  assert.equal(context.location.search, url);
+  assert.equal(node("usn-topic").value, "transport");
+  assert.equal(node("usn-q").value, "chodniku");
+});
+
+test("mobile search preserves an explicitly opened filter panel", async () => {
+  const {api, panel} = app("transport", "chodniku");
+  api.setFiltersOpen(true);
+  await api.search();
+  assert.equal(panel.classList.contains("is-open"), true);
+  api.setFiltersOpen(false);
+  await api.search();
+  assert.equal(panel.classList.contains("is-open"), false);
+});
+
+test("preview truncation marks shortened text and leaves short text intact", () => {
+  const {api} = app();
+  assert.equal(api.truncatePreview("Krátké usnesení."), "Krátké usnesení.");
+  const preview = api.truncatePreview("Dlouhé usnesení o opravě chodníku. ".repeat(15));
+  assert.ok(preview.endsWith("…"));
+  assert.ok(preview.length <= 181);
+  const card = api.renderResultCard({id: "RM/1/1/2026", subject: "<text> ".repeat(50)}, null);
+  assert.ok(card.innerHTML.includes("&lt;text&gt;"));
+  assert.ok(card.innerHTML.includes("…"));
+});
+
+
+test("opening filters reveals selected older years without changing the selection", () => {
+  const {api, node} = app();
+  api.sources(Object.fromEntries([2031, 2030, 2029, 2028, 2027, 2026].map(y => [y, {count: 1}])), {}, {});
+  api.setFiltersOpen(false);
+  assert.notEqual(node("usn-older-years").open, true);
+  api.setFiltersOpen(true);
+  assert.equal(node("usn-older-years").open, true);
+  assert.equal(api.filterSummary().find(f => f.key === "years").label, "Roky: 2026");
+});
+
+test("recent-year selections do not force the older-years disclosure open", () => {
+  const {api, node} = app();
+  api.setFiltersOpen(true);
+  assert.notEqual(node("usn-older-years").open, true);
+});
+
+test("RM/2589/82/2026 shows all three original labels and school reports", () => {
+  const {api} = app();
+  const records = JSON.parse(fs.readFileSync(path.join(__dirname, "../assets/usneseni/data/2026.json"), "utf8"));
+  const resolution = records.find(record => record.id === "RM/2589/82/2026");
+  const card = api.renderResultCard(resolution, null).innerHTML;
+  assert.ok(card.includes("3 rozhodnutí"));
+  for (const label of ["a", "b", "c"]) assert.ok(card.includes(`class="usn-action-label">${label})</strong>`));
+  assert.equal((card.match(/<li>/g) || []).length, 3);
+  assert.ok(card.indexOf("Jungmannova") < card.indexOf("Vítězná"));
+  assert.ok(card.indexOf("Vítězná") < card.indexOf("Nasobůrky"));
+});
+
+test("previews include subjects and single points, and limit longer item lists", () => {
+  const {api} = app();
+  const single = api.renderResolutionPreview({actions: ["schvaluje"], subject: "Změny programu", items: [{label: "a", text: "doplnění programu"}]});
+  assert.ok(single.includes("Změny programu"));
+  assert.ok(single.includes('class="usn-action-label">a)</strong> doplnění programu'));
+  const multiple = api.renderResolutionPreview({items: Array.from({length: 5}, (_, i) => ({label: String(i + 1), text: `Rozhodnutí číslo ${i + 1}`}))});
+  assert.equal((multiple.match(/<li>/g) || []).length, 3);
+  assert.ok(multiple.includes("5 rozhodnutí"));
+  assert.ok(multiple.includes("Další 2 rozhodnutí"));
+  assert.ok(!multiple.includes("Rozhodnutí číslo 4"));
+  assert.ok(!multiple.includes("Rozhodnutí číslo 5"));
+});
+
+test("item previews escape once and highlight accented text without changing labels", () => {
+  const {api} = app();
+  const resolution = {items: [{label: "<a>", text: 'lékař <img src=x onerror=alert(1)> & "citace"'}]};
+  for (const terms of [[], ["lekar"]]) {
+    const preview = api.renderResolutionPreview(resolution, terms);
+    assert.ok(!preview.includes("<img"));
+    assert.ok(preview.includes("&lt;img"));
+    assert.ok(preview.includes("&amp;"));
+    assert.ok(!preview.includes("&amp;lt;"));
+    assert.ok(preview.includes("&lt;a&gt;)"));
+    if (terms.length) assert.ok(preview.includes("<mark>lékař</mark>"));
+  }
+  assert.equal(api.truncatePreview("  Krátký  text\nbez ořezu. "), "Krátký text bez ořezu.");
+});
+
+test("outcome URLs survive reload and reject unknown values", () => {
+  const {api, node, context} = app("transport", "chodniku");
+  node("usn-outcome").value = "rejected";
+  api.updateUrl();
+  assert.equal(new URLSearchParams(context.location.search).get("outcome"), "rejected");
+  node("usn-outcome").value = "";
+  api.loadFromUrl();
+  assert.equal(api.selectedOutcome(), "rejected");
+  assert.equal(api.filtersAreDefault(), false);
+  context.location.search = "?outcome=__proto__";
+  api.loadFromUrl();
+  assert.equal(api.selectedOutcome(), "");
+  api.updateUrl();
+  assert.equal(new URLSearchParams(context.location.search).has("outcome"), false);
+});
+
+const outcomeRecords = [
+  {id: "RM/1/1/2026", organ: "RM", datum: "2026-01-01", actions: ["neschvaluje", "schvaluje"], classification: {category: "transport"}, items: [
+    {label: "a", text: "neschvaluje pronájem zahrady"},
+    {label: "b", text: "schvaluje opravu chodníku"},
+  ]},
+  {id: "RM/2/1/2026", organ: "RM", datum: "2026-02-01", actions: ["revokuje"], subject: "usnesení RM/1/1/2026.", references_out: [{raw: "RM/1/1/2026", resolved: "RM/1/1/2026"}]},
+  {id: "RM/3/1/2026", organ: "RM", datum: "2026-03-01", actions: ["odkládá"], subject: "opravu školy"},
+  {id: "RO/1/2026", organ: "RM", approval_date: "2026-03-01", notes: []},
+  {id: "archive-1", organ: "RM", type: "archive_resolution", date: "2026-04-01", display_text: "neschvaluje žádost"},
+];
+
+test("outcome-only browsing respects topic and document filters, and excludes missing data", async () => {
+  const {api, node} = app("", "", outcomeRecords);
+  for (const [outcome, expected] of [["rejected", "RM/1/1/2026"], ["changed", "RM/2/1/2026"], ["deferred", "RM/3/1/2026"]]) {
+    node("usn-outcome").value = outcome;
+    assert.deepEqual(ids(await api.findResults(null)), [expected]);
+  }
+  node("usn-topic").value = "transport";
+  assert.deepEqual(ids(await api.findResults(null)), []);
+  node("usn-outcome").value = "rejected";
+  assert.deepEqual(ids(await api.findResults(null)), ["RM/1/1/2026"]);
+  api.empty();
+  assert.deepEqual(ids(await api.findResults(null)), []);
+});
+
+test("text search must match the selected decision point", async () => {
+  const {api, node} = app("", "", outcomeRecords);
+  node("usn-outcome").value = "rejected";
+  assert.deepEqual(ids(await api.findResults(api.parseQuery("zahrady"))), ["RM/1/1/2026"]);
+  assert.deepEqual(ids(await api.findResults(api.parseQuery("chodniku"))), []);
+  const preview = api.renderResolutionPreview(outcomeRecords[0], ["zahrady"]);
+  assert.ok(preview.includes("1 odpovídající bod z 2"));
+  assert.ok(preview.includes("<mark>zahrady</mark>"));
+  assert.ok(!preview.includes("opravu chodníku"));
+  assert.ok(!preview.includes('class="usn-action-label">b)'));
+});
+
+test("search terms cannot be combined across separate decision points", async () => {
+  const split = {...outcomeRecords[0], items: [
+    {label: "a", text: "neschvaluje pronájem zahrady"},
+    {label: "b", text: "neschvaluje opravu chodníku"},
+  ]};
+  const {api, node} = app("", "", [split, outcomeRecords[1]]);
+  node("usn-outcome").value = "rejected";
+  assert.deepEqual(ids(await api.findResults(api.parseQuery("zahrady chodniku"))), []);
+});
+
+test("revocations link available originals outside the main result link", async () => {
+  const {api, node} = app("", "", outcomeRecords);
+  node("usn-outcome").value = "changed";
+  const [record] = await api.findResults(null);
+  const html = api.renderResultCard(record, null).innerHTML;
+  assert.ok(html.includes("Původní usnesení:"));
+  assert.ok(html.includes('href="/usneseni/2026/RM-1-1-2026/?back='));
+  assert.ok(html.indexOf("usn-related-decisions") > html.indexOf("</a>"));
+  const missing = {...record, subject: "usnesení RM/9999/1/2026.", references_out: [{raw: "RM/9999/1/2026", resolved: "RM/9999/1/2026"}]};
+  const unavailable = api.renderResultCard(missing, null).innerHTML;
+  assert.ok(unavailable.includes("nepodařilo dohledat"));
+  assert.ok(!unavailable.includes('href="/usneseni/2026/RM-9999-1-2026/'));
+});
+
+test("outcome shortcut starts results without a query and clearing restores welcome", async () => {
+  const {api, node, context} = app("", "", outcomeRecords);
+  await api.browseOutcome("rejected");
+  assert.equal(new URLSearchParams(context.location.search).get("outcome"), "rejected");
+  assert.equal(node("usn-topics").hidden, true);
+  assert.equal(node("usn-outcome-note").hidden, false);
+  assert.ok(api.filterSummary().some(filter => filter.key === "outcome"));
+  await api.clear("outcome");
+  assert.equal(node("usn-topics").hidden, false);
+  assert.equal(node("usn-outcome-note").hidden, true);
+  assert.equal(new URLSearchParams(context.location.search).has("outcome"), false);
+});
+
+test("clearing an outcome preserves the query and topic", async () => {
+  const {api, node, context} = app("transport", "zahrady", outcomeRecords);
+  node("usn-outcome").value = "rejected";
+  await api.clear("outcome");
+  assert.equal(node("usn-q").value, "zahrady");
+  assert.equal(node("usn-topic").value, "transport");
+  assert.equal(node("usn-topics").hidden, true);
+  assert.equal(new URLSearchParams(context.location.search).has("outcome"), false);
 });

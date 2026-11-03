@@ -9,3 +9,4 @@ permalink: pretty
 
 exclude:
   - tests
+  - DESIGN.md

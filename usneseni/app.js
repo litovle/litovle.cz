@@ -7,6 +7,7 @@
   const SNIPPET_LEN = 180;
   const SEARCH_DEBOUNCE_MS = 140;
   const DEFAULT_SEARCH_YEARS = 5;
+  const outcomes = globalThis.UsneseniOutcomes;
   const FEATURED_TOPICS = [
     ["education", "Školy a školky"],
     ["transport", "Doprava a chodníky"],
@@ -41,6 +42,8 @@
   let TYPE_INPUTS = [];
   let ORG_INPUTS = [];
   let SORT_CHIPS = [];
+  let MEETING_OPTIONS = [];
+  let PENDING_MEETING = "";
 
   const q = document.getElementById("usn-q");
   const clearButton = document.getElementById("usn-clear");
@@ -56,8 +59,11 @@
   const yearPresetsBox = document.getElementById("usn-year-presets");
   const sortSel = document.getElementById("usn-sort");
   const sortOptions = document.getElementById("usn-sort-options");
+  const meetingSel = document.getElementById("usn-meeting");
   const typeBox = document.getElementById("usn-type");
   const topicSel = document.getElementById("usn-topic");
+  const outcomeSel = document.getElementById("usn-outcome");
+  const outcomeNote = document.getElementById("usn-outcome-note");
   const topicShortcuts = document.getElementById("usn-topics");
   const extraTopicButtons = document.getElementById("usn-extra-topic-buttons");
   const welcomeTopicChoices = document.getElementById("usn-welcome-topic-choices");
@@ -210,15 +216,28 @@
   }
 
   function highlight(text, terms) {
-    let out = text;
-
-    for (const t of terms) {
-      if (!t) continue;
-      const re = new RegExp(`(${escapeRegExp(t)})`, "gi");
-      out = out.replace(re, "<mark>$1</mark>");
+    const escaped = String(text || "");
+    if (!terms?.length) return escapeHtml(escaped);
+    const folded = value => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("cs");
+    const norm = folded(escaped);
+    const spans = [];
+    for (const term of terms) {
+      const needle = folded(term);
+      if (needle.length < 3) continue;
+      let from = 0;
+      while ((from = norm.indexOf(needle, from)) !== -1) {
+        spans.push([from, from + needle.length]);
+        from += needle.length;
+      }
     }
-
-    return out;
+    spans.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+    let out = "", cursor = 0;
+    for (const [start, end] of spans) {
+      if (start < cursor) continue;
+      out += escapeHtml(escaped.slice(cursor, start)) + `<mark>${escapeHtml(escaped.slice(start, end))}</mark>`;
+      cursor = end;
+    }
+    return out + escapeHtml(escaped.slice(cursor));
   }
 
   // Result cards are rendered from templates, so snippets must be escaped.
@@ -426,6 +445,8 @@
 
     if (q.value) params.set("q", q.value);
     if (selectedTopic()) params.set("category", selectedTopic());
+    if (selectedOutcome()) params.set("outcome", selectedOutcome());
+    if (meetingSel?.value || PENDING_MEETING) params.set("meeting", meetingSel?.value || PENDING_MEETING);
 
     for (const y of selectedYears().length ? selectedYears() : [""]) params.append("y", y);
     for (const t of selectedTypes().length ? selectedTypes() : [""]) params.append("type", t);
@@ -446,6 +467,8 @@
     if (topicSel && category && (category === "unclassified" || Object.hasOwn(TOPICS, category))) {
       topicSel.value = category;
     }
+    if (outcomeSel) outcomeSel.value = outcomes.definition(params.get("outcome")) ? params.get("outcome") : "";
+    if (meetingSel) { PENDING_MEETING = params.get("meeting") || ""; meetingSel.value = MEETING_OPTIONS.includes(PENDING_MEETING) ? PENDING_MEETING : ""; }
 
     const years = params.getAll("y");
     if (years.length) {
@@ -575,6 +598,7 @@
       && TYPE_INPUTS.every(input => input.checked)
       && ORG_INPUTS.every(input => input.checked)
       && !selectedTopic()
+      && !selectedOutcome()
       && sortSel.value === "desc"
     );
   }
@@ -597,6 +621,33 @@
     const category = u.classification?.category;
     if (!selected) return true;
     return selected === "unclassified" ? !category : category === selected;
+  }
+
+  function selectedOutcome() {
+    return outcomes.definition(outcomeSel?.value) ? outcomeSel.value : "";
+  }
+
+  function searchTexts(u) {
+    const outcome = selectedOutcome();
+    return outcome ? outcomes.parts(u, outcome).map(part => outcomes.partText(u, part)) : [searchText(u)];
+  }
+
+  function matchesOutcome(u) {
+    return !selectedOutcome() || outcomes.parts(u, selectedOutcome()).length > 0;
+  }
+
+  function meetingKey(record) {
+    const match = String(record.id || "").match(/^(RM|ZM)\/(\d+)\/(\d+)\/(\d{4})$/);
+    if (match) return `${match[4]}-${match[1]}-${match[3]}`;
+    if (record.meeting_key) return record.meeting_key;
+    const organ = /rada/i.test(record.organ || "") ? "RM" : "ZM";
+    const number = record.meeting_no || record.session_no || "";
+    const year = (record.date || record.datum || "").slice(0, 4) || (record.period || "").slice(-4);
+    return number && year ? `${year}-${organ}-${number}` : "";
+  }
+
+  function matchesMeeting(record) {
+    return !meetingSel?.value || meetingKey(record) === meetingSel.value;
   }
 
   function selectedOrgans() {
@@ -629,9 +680,7 @@
     if (!u.items || u.items.length === 0) {
       return (u.actions || []).join(", ");
     }
-    if (u.items.length === 1) {
-      return u.actions && u.actions[0] ? u.actions[0] : "";
-    }
+    if (u.items.length === 1) return (u.actions || []).join(", ");
     return `${u.items.length} rozhodnutí`;
   }
 
@@ -650,40 +699,26 @@
 
   function renderLoadingState(query) {
     showResultsState({
-      count: "Načítám výsledky",
+      count: "Načítám výsledky…",
       query,
     });
-    res.innerHTML = `
-      <li class="usn-loading-state" aria-hidden="true">
-        <div class="usn-loading-card">
-          <span class="usn-loading-line usn-loading-line-title"></span>
-          <span class="usn-loading-line usn-loading-line-meta"></span>
-          <span class="usn-loading-line usn-loading-line-body"></span>
-          <span class="usn-loading-line usn-loading-line-body-short"></span>
-        </div>
-        <div class="usn-loading-card">
-          <span class="usn-loading-line usn-loading-line-title"></span>
-          <span class="usn-loading-line usn-loading-line-meta"></span>
-          <span class="usn-loading-line usn-loading-line-body"></span>
-          <span class="usn-loading-line usn-loading-line-body-short"></span>
-        </div>
-        <div class="usn-loading-card">
-          <span class="usn-loading-line usn-loading-line-title"></span>
-          <span class="usn-loading-line usn-loading-line-meta"></span>
-          <span class="usn-loading-line usn-loading-line-body"></span>
-          <span class="usn-loading-line usn-loading-line-body-short"></span>
-        </div>
-      </li>
-    `;
+    res.innerHTML = "";
   }
 
-  // Mobile uses a collapsed filter tray; desktop keeps filters visible.
-  function setMobileFiltersOpen(open) {
+  // Disclosure visibility is independent of the search stored in the URL.
+  function setFiltersOpen(open) {
     if (!searchPanel) return;
     searchPanel.classList.toggle("is-open", open);
+    if (open) {
+      const recent = defaultYears(sortedYearsFromMeta());
+      const older = document.getElementById("usn-older-years");
+      if (older && YEAR_INPUTS.some(input => input.checked && !recent.includes(input.value))) {
+        older.open = true;
+      }
+    }
     if (refineToggle) {
-      refineToggle.textContent = "Upřesnit hledání";
-      refineToggle.setAttribute("aria-expanded", open ? "true" : "false");
+      refineToggle.textContent = open ? "Skrýt upřesnění" : "Upřesnit hledání";
+      refineToggle.setAttribute("aria-expanded", String(open));
     }
   }
 
@@ -786,6 +821,7 @@
 
     // Load all selected years in parallel, then resolve indexed hits from memory.
     await Promise.all(years.map(year => loadYear(year)));
+    renderMeetingOptions(years.flatMap(year => [...(DATA[year] || []), ...(ARCHIVE_DATA[year] || [])]));
 
     for (const y of years) {
       if (!anchor) {
@@ -815,13 +851,27 @@
     return [...out.values()];
   }
 
+  function renderMeetingOptions(records) {
+    if (!meetingSel) return;
+    const previous = meetingSel.value;
+    const options = new Map();
+    for (const record of records) {
+      const key = meetingKey(record);
+      if (!key) continue;
+      const organ = key.includes("-RM-") ? "Rada" : "Zastupitelstvo";
+      options.set(key, `${key.slice(0, 4)} · ${organ} · schůze/zasedání ${key.slice(7)}`);
+    }
+    MEETING_OPTIONS = [...options.keys()].sort().reverse();
+    meetingSel.innerHTML = `<option value="">Všechny schůze</option>${MEETING_OPTIONS.map(key => `<option value="${escapeHtml(key)}">${escapeHtml(options.get(key))}</option>`).join("")}`;
+    if (MEETING_OPTIONS.includes(previous || PENDING_MEETING)) { meetingSel.value = previous || PENDING_MEETING; PENDING_MEETING = ""; }
+  }
+
   function matchesPhrase(u, phrase) {
-    return searchText(u).includes(phrase);
+    return searchTexts(u).some(text => text.includes(phrase));
   }
 
   function matchesAllTerms(u, terms) {
-    const text = searchText(u);
-    return terms.every(t => text.includes(t));
+    return searchTexts(u).some(text => terms.every(t => text.includes(t)));
   }
 
   // Keep all header/result-state toggles in one place.
@@ -859,20 +909,20 @@
     const isRo = u.id && u.id.startsWith("RO/");
     const matchesType = (isRo && types.includes("ro"))
       || (!isRo && types.includes("usneseni"));
-    return matchesType && organs.includes(normalizedOrgan(u)) && matchesTopic(u);
+    return matchesType && organs.includes(normalizedOrgan(u)) && matchesTopic(u) && matchesOutcome(u);
   }
 
   function filterByCurrentFilters(list, types, organs) {
-    return list.filter(u => documentMatchesCurrentFilters(u, types, organs));
+    return list.filter(u => documentMatchesCurrentFilters(u, types, organs) && matchesMeeting(u));
   }
 
   // Search in two passes: exact normalized phrase first, all terms second.
   async function findResults(parsed) {
-    const candidates = await collectCandidates(parsed?.anchor, selectedYears());
+    const candidates = await collectCandidates(selectedOutcome() ? null : parsed?.anchor, selectedYears());
     const types = selectedTypes();
     const organs = selectedOrgans();
 
-    if (!parsed) return sortResults(filterByCurrentFilters(candidates, types, organs));
+    if (!parsed) return finishResults(filterByCurrentFilters(candidates, types, organs));
 
     let results = filterByCurrentFilters(
       candidates.filter(u => matchesPhrase(u, parsed.raw)),
@@ -888,7 +938,52 @@
       );
     }
 
-    return sortResults(results);
+    return finishResults(results);
+  }
+
+  async function finishResults(results) {
+    results = sortResults(results);
+    if (selectedOutcome() === "changed") {
+      const years = new Set(results.flatMap(u => outcomes.references(u, "changed")).map(id => id.split("/").pop()));
+      await Promise.all([...years].filter(year => Object.hasOwn(META, year)).map(loadYear));
+    }
+    return results;
+  }
+
+  function truncatePreview(text) {
+    text = (text || "").replace(/\s+/g, " ").trim();
+    if (text.length <= SNIPPET_LEN) return text;
+    const prefix = text.slice(0, SNIPPET_LEN);
+    const boundary = prefix.lastIndexOf(" ");
+    return (boundary > SNIPPET_LEN / 2 ? prefix.slice(0, boundary) : prefix).trimEnd() + "…";
+  }
+
+  // Keep this preview contract in sync with static_export.usneseni in usneseni-mesta.
+  function renderResolutionPreview(u, terms = []) {
+    const outcome = selectedOutcome();
+    let items = u.items || [];
+    if (outcome && items.length) {
+      items = outcomes.parts(u, outcome).filter(part => terms.every(term => outcomes.partText(u, part).includes(term)));
+    }
+    const summary = outcome && u.items?.length
+      ? `${items.length} odpovídající ${items.length === 1 ? "bod" : items.length < 5 ? "body" : "bodů"} z ${u.items.length}`
+      : summaryLabel(u);
+    const parts = summary ? [`<div class="usn-summary">${escapeHtml(summary)}</div>`] : [];
+    const subject = truncatePreview(u.subject || "");
+    if (subject) parts.push(`<div class="usn-snippet">${highlight(subject, terms)}</div>`);
+    if (items.length) {
+      const previews = items.slice(0, 3).map(item => {
+        const label = String(item.label || "");
+        const labelHtml = label ? `<strong class="usn-action-label">${escapeHtml(label)})</strong> ` : "";
+        return `<li>${labelHtml}${highlight(truncatePreview(item.text || ""), terms)}</li>`;
+      });
+      parts.push(`<ul class="usn-action-preview">${previews.join("")}</ul>`);
+      const remaining = items.length - 3;
+      if (remaining > 0) parts.push(`<div class="usn-actions-more">${remaining < 5 ? "Další" : "Dalších"} ${remaining} rozhodnutí</div>`);
+    } else if (!subject && u.tail) {
+      parts.push(`<div class="usn-snippet">${highlight(truncatePreview(u.tail), terms)}</div>`);
+    }
+    return parts.join("\n");
   }
 
   function renderResultCard(u, parsed) {
@@ -899,10 +994,10 @@
     const href = hrefFromRecord(u);
     const linkAttrs = "";
 
-    const snippetRaw = ((roMatch && roMatch.snippet) || firstSentence(u) || "").slice(0, SNIPPET_LEN);
+    const snippetRaw = truncatePreview((roMatch && roMatch.snippet) || firstSentence(u) || "");
     const snippetSafe = escapeHtml(snippetRaw);
     const snippet = parsed
-      ? highlight(snippetSafe, parsed.longWords)
+      ? highlight(snippetRaw, parsed.longWords)
       : snippetSafe;
 
     const isRo = u.id.startsWith("RO/");
@@ -921,15 +1016,11 @@
         <div class="usn-head">
           <strong>${escapeHtml(title)}</strong>
           <span class="usn-date">${escapeHtml(date)}</span>
-          <span class="usn-badges">
-            <span class="usn-doc-type ${typeClass}">${typeLabel}</span>
-            ${topicLabel ? `<span class="usn-topic-label" title="Automaticky přiřazené téma">${escapeHtml(topicLabel)}</span>` : ""}
-          </span>
+          <span class="usn-result-kind usn-doc-type ${typeClass}">${typeLabel}</span>
+          ${topicLabel ? `<span class="usn-result-topic">${escapeHtml(topicLabel)}${u.classification?.source === "model" ? " · automaticky" : ""}</span>` : ""}
         </div>
 
-        <div class="usn-summary">${escapeHtml(summaryLabel(u))}</div>
-
-        ${isRo ? "" : `<div class="usn-snippet">${snippet}</div>`}
+        ${!isArchive && !isRo ? renderResolutionPreview(u, parsed?.longWords || []) : `<div class="usn-summary">${escapeHtml(summaryLabel(u))}</div>${isRo ? "" : `<div class="usn-snippet">${snippet}</div>`}`}
 
         ${roMatch && roMatch.matches && roMatch.matches.length
           ? `<div class="usn-ro-matches">${
@@ -937,7 +1028,7 @@
               <a href="${href}${match.anchor ? `#${match.anchor}` : ""}" class="usn-ro-match-item">
                 <span class="usn-ro-match-badge">${index === 0 ? "Shoda" : "Další"}</span>
                 <strong>${match.label}</strong>
-                <span>${highlight((cleanRoSnippet(match.snippet) || match.label).slice(0, SNIPPET_LEN), parsed.longWords)}</span>
+                <span>${highlight(truncatePreview(cleanRoSnippet(match.snippet) || match.label), parsed.longWords)}</span>
               </a>
             `).join("")
           }${
@@ -947,9 +1038,19 @@
           }</div>`
           : ""}
       </a>
+      ${renderOutcomeReferences(u)}
     `;
 
     return li;
+  }
+
+  function renderOutcomeReferences(u) {
+    if (selectedOutcome() !== "changed" || !outcomes.parts(u, "changed").length) return "";
+    const ids = outcomes.references(u, "changed");
+    const available = ids.filter(id => DATA_MAP[id.split("/").pop()]?.[id]);
+    const links = available.map(id => `<a href="${escapeHtml(hrefFromRecord(DATA_MAP[id.split("/").pop()][id]))}">${escapeHtml(id)}</a>`);
+    if (!links.length) return '<p class="usn-related-decisions">Původní usnesení se v dostupných datech nepodařilo dohledat.</p>';
+    return `<p class="usn-related-decisions">Původní usnesení: ${links.join(", ")}${available.length < ids.length ? " · další odkazované usnesení není dostupné" : ""}</p>`;
   }
 
   // Main search orchestration: parse input, load candidates, then render state/results.
@@ -964,7 +1065,7 @@
     syncTopicShortcuts();
     updateSearchPresentation();
 
-    if ((!parsed && !selectedTopic()) || (parsed && !parsed.anchor)) {
+    if ((!parsed && !selectedTopic() && !selectedOutcome()) || (parsed && !parsed.anchor)) {
       setBusy(false);
       if (!parsed) {
         clearResultsState();
@@ -975,9 +1076,6 @@
       return;
     }
 
-    if (window.innerWidth <= 700) {
-      setMobileFiltersOpen(false);
-    }
     setBusy(true);
     renderLoadingState(q.value.trim());
     const results = await findResults(parsed);
@@ -1078,6 +1176,7 @@
     const filters = [];
     const topic = selectedTopic();
     if (topic) filters.push({key: "topic", label: `Téma: ${topic === "unclassified" ? "Bez zařazení" : TOPICS[topic] || topic}`, removable: true});
+    if (selectedOutcome()) filters.push({key: "outcome", label: `Výsledek: ${outcomes.definition(selectedOutcome()).label}`, removable: true});
     const years = selectedYears();
     filters.push({key: "years", label: `Roky: ${years.join(", ") || "žádné"}`,
       removable: years.join("|") !== defaultYears(sortedYearsFromMeta()).join("|")});
@@ -1089,13 +1188,18 @@
       const names = {"Rada města Litovel": "Rada města", "Zastupitelstvo města Litovel": "Zastupitelstvo"};
       filters.push({key: "organs", label: `Orgán: ${selectedOrgans().map(organ => names[organ] || organ).join(", ") || "žádný"}`, removable: true});
     }
+    if (meetingSel?.value) filters.push({key: "meeting", label: `Schůze: ${meetingSel.selectedOptions[0]?.textContent || meetingSel.value}`, removable: true});
     if (sortSel.value !== "desc") filters.push({key: "sort", label: "Řazení: Nejstarší", removable: true});
     return filters;
   }
 
   function updateSearchPresentation() {
-    const searching = Boolean(q.value.trim() || selectedTopic());
+    const searching = Boolean(q.value.trim() || selectedTopic() || selectedOutcome());
     if (topicShortcuts) topicShortcuts.hidden = searching;
+    if (outcomeNote) {
+      outcomeNote.hidden = !selectedOutcome();
+      outcomeNote.textContent = selectedOutcome() ? outcomes.definition(selectedOutcome()).note + " Filtr vychází z výslovných akcí usnesení; archivní dokumenty a RO tyto údaje nemají." : "";
+    }
     if (!activeFiltersBox) return;
     activeFiltersBox.hidden = !searching && filtersAreDefault();
     activeFiltersBox.replaceChildren();
@@ -1118,6 +1222,8 @@
     else if (key === "types") TYPE_INPUTS.forEach(input => {input.checked = true;});
     else if (key === "organs") ORG_INPUTS.forEach(input => {input.checked = true;});
     else if (key === "sort") {sortSel.value = "desc"; syncSortChips();}
+    else if (key === "meeting") meetingSel.value = "";
+    else if (key === "outcome") outcomeSel.value = "";
     else return;
     cancelQueuedSearch();
     q.focus();
@@ -1138,6 +1244,14 @@
     q.value = "";
     topicSel.value = category;
     syncClearButton();
+    q.focus();
+    return search();
+  }
+
+  async function browseOutcome(value) {
+    if (!outcomeSel || !outcomes.definition(value)) return;
+    outcomeSel.value = value;
+    cancelQueuedSearch();
     q.focus();
     return search();
   }
@@ -1202,6 +1316,10 @@
   }
 
   function renderYearFilters(years) {
+    const recent = defaultYears(years);
+    const recentBox = document.getElementById("usn-recent-years");
+    const olderBox = document.getElementById("usn-older-year-options");
+    document.getElementById("usn-older-years").hidden = years.length <= recent.length;
     for (const year of years) {
       const count = (META[year]?.count || 0) + (RO_META[year]?.count || 0) + (ARCHIVE_META[year]?.count || 0);
       const label = document.createElement("label");
@@ -1210,7 +1328,7 @@
         <input type="checkbox" value="${year}">
         ${year} (${count})
       `;
-      yearsBox.appendChild(label);
+      (recent.includes(year) ? recentBox : olderBox).appendChild(label);
     }
     YEAR_INPUTS = [...yearsBox.querySelectorAll("input")];
   }
@@ -1227,7 +1345,7 @@
   }
 
   function searchWithOpenFilters() {
-    setMobileFiltersOpen(true);
+    setFiltersOpen(true);
     cancelQueuedSearch();
     search();
   }
@@ -1252,9 +1370,11 @@
     typeBox.addEventListener("change", searchWithOpenFilters);
     orgBox.addEventListener("change", searchWithOpenFilters);
     topicSel?.addEventListener("change", searchWithOpenFilters);
+    outcomeSel?.addEventListener("change", searchWithOpenFilters);
+    meetingSel?.addEventListener("change", searchWithOpenFilters);
 
     sortSel.addEventListener("change", () => {
-      setMobileFiltersOpen(true);
+      setFiltersOpen(true);
       syncSortChips();
       search();
     });
@@ -1263,7 +1383,7 @@
       const button = event.target.closest("[data-sort-value]");
       if (!button) return;
       sortSel.value = button.dataset.sortValue || "desc";
-      setMobileFiltersOpen(true);
+      setFiltersOpen(true);
       syncSortChips();
       search();
     });
@@ -1277,8 +1397,10 @@
     topicShortcuts?.addEventListener("click", event => {
       const topic = event.target.closest("[data-topic]");
       const place = event.target.closest("[data-place]");
+      const outcome = event.target.closest("[data-outcome]");
       if (topic) browseTopic(topic.dataset.topic);
       else if (place) browsePlace(place.dataset.place);
+      else if (outcome) browseOutcome(outcome.dataset.outcome);
     });
 
     q.addEventListener("input", () => {
@@ -1298,11 +1420,12 @@
     });
 
     refineToggle?.addEventListener("click", () => {
-      setMobileFiltersOpen(!searchPanel.classList.contains("is-open"));
+      setFiltersOpen(!searchPanel.classList.contains("is-open"));
     });
 
     backToTopButton?.addEventListener("click", scrollSearchIntoView);
     window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
+    window.addEventListener("pageshow", () => setFiltersOpen(false));
   }
 
   // ============================================================
@@ -1326,7 +1449,7 @@
       syncSortChips();
       bindFilterEvents(years);
       bindUiEvents();
-      setMobileFiltersOpen(!filtersAreDefault());
+      setFiltersOpen(false);
       updateBackToTopVisibility();
       setBootReady(true);
 

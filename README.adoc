@@ -23,16 +23,38 @@ Usnesení města jsou dlouhodobě publikována ve formě PDF dokumentů. Projekt
 
 Vyhledávání nabízí filtr Téma a automaticky přiřazené tematické štítky.
 Kategorie pochází z klasifikátoru v datové pipeline; web model nespouští.
-Uvítací sekce Nevíte, kde začít? nabízí šest tematických zkratek,
+Náhledy v hledání i na stránkách schůzí zachovávají předmět usnesení a nejvýše
+tři body s původním označením. U vícebodových usnesení uvádějí celkový počet
+rozhodnutí a počet dalších bodů dostupných v detailu. Dlouhý text se zkracuje
+na hranici slova s výpustkou; znění ani pořadí bodů se nemění. Statické náhledy
+generuje `static_export/usneseni.py` v projektu `usneseni-mesta`.
+Uvítací sekce Podívejte se, co město řeší ve vašem okolí. nabízí šest tematických zkratek,
 další kategorie, hledání podle místní části a přehled dostupných dat.
 Výběr tématu vymaže textový dotaz; výběr místa zruší tematický filtr a vyhledá
-název místa. Ostatní filtry zůstávají zachované. Uvítací sekce Nevíte, kde začít? se zobrazuje
+název místa. Ostatní filtry zůstávají zachované. Uvítací sekce Podívejte se, co město řeší ve vašem okolí. se zobrazuje
 pouze bez textového dotazu a zvoleného tématu. Při hledání ji nahrazuje přehled
 aktivních filtrů; omezení lze jednotlivě zrušit. Podrobné volby otevírá tlačítko
-Upřesnit hledání. Vymazání dotazu i tématu vrátí uvítací sekci.
+Upřesnit hledání; při otevření se změní na Skrýt upřesnění.
+Po příchodu na stránku i návratu z usnesení jsou podrobné volby sbalené,
+zatímco dotaz a filtry se obnoví z URL. Při úpravě filtrů zůstávají otevřené
+na počítači i telefonu. Roky jsou v samostatné sekci; starší roky se rozbalují
+pod volbou Starší roky a při otevření filtrů se automaticky ukážou, pokud jsou vybrané. Náhledy výsledků mají nejvýše tři řádky a zkrácení
+označuje výpustka. Vymazání dotazu i tématu vrátí uvítací sekci.
 Téma lze procházet i bez hledaného výrazu a sdílet pomocí URL parametru
 `category` (například `/usneseni/?category=transport`). Volba Bez zařazení
 zahrnuje dokumenty bez kategorie, například starší archiv a rozpočtová opatření.
+
+Filtr Výsledek rozhodnutí nabízí tři automatické pohledy: Zamítnuto
+(`neschvaluje`, `nesouhlasí`), Změněno (`revokuje`) a Odloženo (`odkládá`,
+`stahuje bod`). Stejné volby jsou jako zkratky vedle hledání podle místa.
+Nejde o hodnocení sporů ani o ruční výběr zajímavostí; rozhoduje výslovná akce
+v podkladu. Archivní dokumenty a RO bez těchto údajů se při výběru nezahrnují.
+U vícedílného usnesení se zobrazí jen odpovídající body s původním označením;
+textový dotaz musí odpovídat stejnému bodu nebo společnému předmětu usnesení.
+Výběr lze sdílet například jako `/usneseni/?outcome=rejected`;
+další hodnoty jsou `changed` a `deferred`. Odebrání filtru zachová ostatní volby.
+U revokací se odkazují pouze původní usnesení dohledaná v dostupných datech
+a uvedená přímo v revokačním bodu. Chybějící podklad se označí slovně.
 
 Výstupem jsou statické datové indexy, které lze dlouhodobě provozovat bez závislosti na serverové logice.
 
@@ -68,7 +90,8 @@ test runner bez dalších závislostí:
 [source,shell]
 ----
 node --check usneseni/app.js
-node --test tests/usneseni-topics.test.cjs
+node --check usneseni/outcomes.js
+node --test tests/*.test.cjs
 ----
 
 Datové exporty a front matter stránek vznikají v `usneseni-mesta`; ruční úpravy
