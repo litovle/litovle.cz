@@ -5,7 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 // Exercise the existing browser functions with fixture data and URL state.
-function app(category = "", query = "") {
+function app(category = "", query = "", fixtureRecords = null) {
   const nodes = new Map();
   const events = {};
   const classes = new Set();
@@ -20,7 +20,7 @@ function app(category = "", query = "") {
   node("usn-topic").value = category;
   node("usn-sort").value = "desc";
   node("usn-q").value = query;
-  const records = [
+  const records = fixtureRecords || [
     {id: "RM/1/1/2026", organ: "RM", datum: "2026-01-01", subject: "oprava chodniku", classification: {category: "transport"}},
     {id: "RM/2/1/2026", organ: "RM", datum: "2026-02-01", subject: "kulturni akce", classification: {category: "culture"}},
     {id: "RO/1/2026", organ: "RM", approval_date: "2026-03-01", notes: []},
@@ -31,12 +31,13 @@ function app(category = "", query = "") {
     "/assets/usneseni/meta.json": {2026: {count: 2}},
     "/assets/usneseni/ro/meta.json": {2026: {count: 1}},
     "/assets/usneseni/archive/meta.json": {2026: {count: 1}},
-    "/assets/usneseni/data/2026.json": records.slice(0, 2),
+    "/assets/usneseni/data/2026.json": records.filter(r => !r.id.startsWith("RO/") && !r.type?.startsWith("archive_")),
     "/assets/usneseni/index/2026.json": {chodniku: [records[0].id], kulturni: [records[1].id]},
-    "/assets/usneseni/ro/data/2026.json": [records[2]],
-    "/assets/usneseni/archive/data/2026.json": [records[3]],
+    "/assets/usneseni/ro/data/2026.json": records.filter(r => r.id.startsWith("RO/")),
+    "/assets/usneseni/archive/data/2026.json": records.filter(r => r.type?.startsWith("archive_")),
   };
   const context = vm.createContext({
+    UsneseniOutcomes: require("../usneseni/outcomes.js"),
     document: {createDocumentFragment: () => ({appendChild: () => {}}), getElementById: node, querySelector: selector => selector === ".usn-search-panel" ? panel : null, createElement: () => ({dataset: {}, setAttribute: function(name, value) {this[name] = value;}})},
     location: {pathname: "/usneseni/", search: "", hash: ""},
     history: {replaceState: (_, __, url) => {context.location.search = url;}},
@@ -55,7 +56,7 @@ function app(category = "", query = "") {
     ORG_INPUTS = [{value: "Rada města Litovel", checked: true}, {value: "Zastupitelstvo města Litovel", checked: true}];
     globalThis.api = {loadYear, setFiltersOpen, bindUiEvents, truncatePreview, renderResolutionPreview, search, searchWithOpenFilters,
       sources: (resolutions, budgets, archive) => {META = resolutions; RO_META = budgets; ARCHIVE_META = archive;},
-      findResults, parseQuery, updateUrl, loadFromUrl, filtersAreDefault,
+      findResults, parseQuery, updateUrl, loadFromUrl, filtersAreDefault, selectedOutcome, browseOutcome,
       paginate, renderResultCard, selectedTopic, loadMeta, renderWelcomeOverview, filterSummary, updateSearchPresentation,
       shortcut: async (category, place = false) => {
         const original = search;
@@ -356,4 +357,104 @@ test("item previews escape once and highlight accented text without changing lab
     if (terms.length) assert.ok(preview.includes("<mark>lékař</mark>"));
   }
   assert.equal(api.truncatePreview("  Krátký  text\nbez ořezu. "), "Krátký text bez ořezu.");
+});
+
+test("outcome URLs survive reload and reject unknown values", () => {
+  const {api, node, context} = app("transport", "chodniku");
+  node("usn-outcome").value = "rejected";
+  api.updateUrl();
+  assert.equal(new URLSearchParams(context.location.search).get("outcome"), "rejected");
+  node("usn-outcome").value = "";
+  api.loadFromUrl();
+  assert.equal(api.selectedOutcome(), "rejected");
+  assert.equal(api.filtersAreDefault(), false);
+  context.location.search = "?outcome=__proto__";
+  api.loadFromUrl();
+  assert.equal(api.selectedOutcome(), "");
+  api.updateUrl();
+  assert.equal(new URLSearchParams(context.location.search).has("outcome"), false);
+});
+
+const outcomeRecords = [
+  {id: "RM/1/1/2026", organ: "RM", datum: "2026-01-01", actions: ["neschvaluje", "schvaluje"], classification: {category: "transport"}, items: [
+    {label: "a", text: "neschvaluje pronájem zahrady"},
+    {label: "b", text: "schvaluje opravu chodníku"},
+  ]},
+  {id: "RM/2/1/2026", organ: "RM", datum: "2026-02-01", actions: ["revokuje"], subject: "usnesení RM/1/1/2026.", references_out: [{raw: "RM/1/1/2026", resolved: "RM/1/1/2026"}]},
+  {id: "RM/3/1/2026", organ: "RM", datum: "2026-03-01", actions: ["odkládá"], subject: "opravu školy"},
+  {id: "RO/1/2026", organ: "RM", approval_date: "2026-03-01", notes: []},
+  {id: "archive-1", organ: "RM", type: "archive_resolution", date: "2026-04-01", display_text: "neschvaluje žádost"},
+];
+
+test("outcome-only browsing respects topic and document filters, and excludes missing data", async () => {
+  const {api, node} = app("", "", outcomeRecords);
+  for (const [outcome, expected] of [["rejected", "RM/1/1/2026"], ["changed", "RM/2/1/2026"], ["deferred", "RM/3/1/2026"]]) {
+    node("usn-outcome").value = outcome;
+    assert.deepEqual(ids(await api.findResults(null)), [expected]);
+  }
+  node("usn-topic").value = "transport";
+  assert.deepEqual(ids(await api.findResults(null)), []);
+  node("usn-outcome").value = "rejected";
+  assert.deepEqual(ids(await api.findResults(null)), ["RM/1/1/2026"]);
+  api.empty();
+  assert.deepEqual(ids(await api.findResults(null)), []);
+});
+
+test("text search must match the selected decision point", async () => {
+  const {api, node} = app("", "", outcomeRecords);
+  node("usn-outcome").value = "rejected";
+  assert.deepEqual(ids(await api.findResults(api.parseQuery("zahrady"))), ["RM/1/1/2026"]);
+  assert.deepEqual(ids(await api.findResults(api.parseQuery("chodniku"))), []);
+  const preview = api.renderResolutionPreview(outcomeRecords[0], ["zahrady"]);
+  assert.ok(preview.includes("1 odpovídající bod z 2"));
+  assert.ok(preview.includes("<mark>zahrady</mark>"));
+  assert.ok(!preview.includes("opravu chodníku"));
+  assert.ok(!preview.includes('class="usn-action-label">b)'));
+});
+
+test("search terms cannot be combined across separate decision points", async () => {
+  const split = {...outcomeRecords[0], items: [
+    {label: "a", text: "neschvaluje pronájem zahrady"},
+    {label: "b", text: "neschvaluje opravu chodníku"},
+  ]};
+  const {api, node} = app("", "", [split, outcomeRecords[1]]);
+  node("usn-outcome").value = "rejected";
+  assert.deepEqual(ids(await api.findResults(api.parseQuery("zahrady chodniku"))), []);
+});
+
+test("revocations link available originals outside the main result link", async () => {
+  const {api, node} = app("", "", outcomeRecords);
+  node("usn-outcome").value = "changed";
+  const [record] = await api.findResults(null);
+  const html = api.renderResultCard(record, null).innerHTML;
+  assert.ok(html.includes("Původní usnesení:"));
+  assert.ok(html.includes('href="/usneseni/2026/RM-1-1-2026/?back='));
+  assert.ok(html.indexOf("usn-related-decisions") > html.indexOf("</a>"));
+  const missing = {...record, subject: "usnesení RM/9999/1/2026.", references_out: [{raw: "RM/9999/1/2026", resolved: "RM/9999/1/2026"}]};
+  const unavailable = api.renderResultCard(missing, null).innerHTML;
+  assert.ok(unavailable.includes("nepodařilo dohledat"));
+  assert.ok(!unavailable.includes('href="/usneseni/2026/RM-9999-1-2026/'));
+});
+
+test("outcome shortcut starts results without a query and clearing restores welcome", async () => {
+  const {api, node, context} = app("", "", outcomeRecords);
+  await api.browseOutcome("rejected");
+  assert.equal(new URLSearchParams(context.location.search).get("outcome"), "rejected");
+  assert.equal(node("usn-topics").hidden, true);
+  assert.equal(node("usn-outcome-note").hidden, false);
+  assert.ok(api.filterSummary().some(filter => filter.key === "outcome"));
+  await api.clear("outcome");
+  assert.equal(node("usn-topics").hidden, false);
+  assert.equal(node("usn-outcome-note").hidden, true);
+  assert.equal(new URLSearchParams(context.location.search).has("outcome"), false);
+});
+
+test("clearing an outcome preserves the query and topic", async () => {
+  const {api, node, context} = app("transport", "zahrady", outcomeRecords);
+  node("usn-outcome").value = "rejected";
+  await api.clear("outcome");
+  assert.equal(node("usn-q").value, "zahrady");
+  assert.equal(node("usn-topic").value, "transport");
+  assert.equal(node("usn-topics").hidden, true);
+  assert.equal(new URLSearchParams(context.location.search).has("outcome"), false);
 });

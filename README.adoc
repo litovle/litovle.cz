@@ -44,6 +44,18 @@ Téma lze procházet i bez hledaného výrazu a sdílet pomocí URL parametru
 `category` (například `/usneseni/?category=transport`). Volba Bez zařazení
 zahrnuje dokumenty bez kategorie, například starší archiv a rozpočtová opatření.
 
+Filtr Výsledek rozhodnutí nabízí tři automatické pohledy: Zamítnuto
+(`neschvaluje`, `nesouhlasí`), Změněno (`revokuje`) a Odloženo (`odkládá`,
+`stahuje bod`). Stejné volby jsou jako zkratky vedle hledání podle místa.
+Nejde o hodnocení sporů ani o ruční výběr zajímavostí; rozhoduje výslovná akce
+v podkladu. Archivní dokumenty a RO bez těchto údajů se při výběru nezahrnují.
+U vícedílného usnesení se zobrazí jen odpovídající body s původním označením;
+textový dotaz musí odpovídat stejnému bodu nebo společnému předmětu usnesení.
+Výběr lze sdílet například jako `/usneseni/?outcome=rejected`;
+další hodnoty jsou `changed` a `deferred`. Odebrání filtru zachová ostatní volby.
+U revokací se odkazují pouze původní usnesení dohledaná v dostupných datech
+a uvedená přímo v revokačním bodu. Chybějící podklad se označí slovně.
+
 Výstupem jsou statické datové indexy, které lze dlouhodobě provozovat bez závislosti na serverové logice.
 
 Více informací:
@@ -78,7 +90,8 @@ test runner bez dalších závislostí:
 [source,shell]
 ----
 node --check usneseni/app.js
-node --test tests/usneseni-topics.test.cjs
+node --check usneseni/outcomes.js
+node --test tests/*.test.cjs
 ----
 
 Datové exporty a front matter stránek vznikají v `usneseni-mesta`; ruční úpravy

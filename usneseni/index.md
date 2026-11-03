@@ -85,7 +85,7 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
 .usn-app :is(.usn-sort-chip.is-active, .usn-topic-button[aria-pressed="true"]) { background: var(--usn-accent); color: #fff; border-color: var(--usn-accent); }
 .usn-app .usn-sort-chip.is-active { background: var(--usn-link); border-color: var(--usn-link); }
 .usn-sort-select { display: none; }
-#usn-topic { width: 100%; min-height: var(--control-height); padding: .5rem; border: 1px solid #929b90; border-radius: 8px; background: #fff; }
+.usn-app select:not(.usn-sort-select) { width: 100%; max-width: 100%; min-height: var(--control-height); padding: .5rem; border: 1px solid #929b90; border-radius: 8px; background: #fff; color: var(--primary-text-color); }
 #usn-topic-note { margin-top: .4rem; color: var(--usn-muted); }
 .usn-active-filters { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 .usn-active-filter { min-height: var(--control-height); padding: .4rem .65rem; border: 1px solid var(--usn-border); border-radius: var(--radius-control); background: #e8efe5; color: var(--usn-accent); }
@@ -98,14 +98,17 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
 .usn-welcome-intro p { margin: 0; max-width: 58ch; line-height: 1.55; }
 .usn-welcome h3 { margin: 0 0 .5rem; font-size: var(--text-body); }
 .usn-welcome-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.usn-welcome-places, .usn-welcome-footer { padding: var(--space-panel); border-radius: var(--radius-panel); background: var(--surface-panel); }
-.usn-welcome-places p, .usn-welcome-footer p { margin: 0; line-height: 1.5; }
+.usn-welcome-places, .usn-outcome-shortcuts { padding: var(--space-panel); border-radius: var(--radius-panel); background: var(--surface-panel); }
+.usn-welcome-places p, .usn-outcome-shortcuts p, .usn-welcome-footer p { margin: 0; line-height: 1.5; }
 .usn-topic-buttons { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
 .usn-app #usn-topic-buttons .usn-topic-button { background: #2f5a41; border-color: #2f5a41; color: #fff; }
 .usn-app #usn-topic-buttons .usn-topic-button:hover { background: #254b35; }
 .usn-more-topics { margin-top: .5rem; }
 .usn-more-topics summary { color: var(--usn-accent); padding: .4rem 0; width: fit-content; }
 .usn-welcome-footer { color: var(--usn-muted); font-size: var(--text-small); }
+.usn-outcome-note { color: var(--usn-muted); font-size: var(--text-small); margin: 0; line-height: 1.5; }
+.usn-related-decisions { margin: 8px 0 0; color: var(--text-muted); font-size: var(--text-small); }
+.usn-related-decisions a { display: inline-block; padding-block: 4px; }
 .usn-welcome-links { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin-top: .5rem; }
 .usn-welcome-links a { padding: .35rem 0; }
 .usn-results-panel { display: grid; gap: .5rem; }
@@ -152,8 +155,15 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
         <select id="usn-topic" aria-describedby="usn-topic-note" data-usn-boot disabled></select>
         <small id="usn-topic-note">Téma je přiřazené automaticky.</small>
       </div>
-
-
+      <div class="usn-filter-group">
+        <label class="usn-filter-label" for="usn-outcome">Výsledek rozhodnutí</label>
+        <select id="usn-outcome" aria-describedby="usn-outcome-note" data-usn-boot disabled>
+          <option value="">Všechny výsledky</option>
+          <option value="rejected">Zamítnuto</option>
+          <option value="changed">Změněno</option>
+          <option value="deferred">Odloženo</option>
+        </select>
+      </div>
       <div class="usn-filter-group">
         <div class="usn-filter-label">Typ dokumentu</div>
         <div id="usn-type" class="usn-filter-options">
@@ -211,6 +221,7 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
         </div>
       </div>
     </div>
+    <p id="usn-outcome-note" class="usn-outcome-note" hidden></p>
   </div>
 
   <section id="usn-topics" class="usn-welcome" aria-labelledby="usn-welcome-title" hidden>
@@ -239,8 +250,17 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
             <button type="button" class="usn-place-button" data-place="Nová Ves" data-usn-boot disabled>Nová Ves</button>
           </div>
         </section>
+        <section class="usn-outcome-shortcuts" aria-labelledby="usn-outcomes-title">
+          <h3 id="usn-outcomes-title">Za rozhodnutími města</h3>
+          <p>Co město odmítlo, změnilo nebo odložilo?</p>
+          <div class="usn-topic-buttons" role="group" aria-label="Procházet podle výsledku rozhodnutí">
+            <button type="button" class="usn-topic-button" data-outcome="rejected" data-usn-boot disabled>Zamítnuto</button>
+            <button type="button" class="usn-topic-button" data-outcome="changed" data-usn-boot disabled>Změněno</button>
+            <button type="button" class="usn-topic-button" data-outcome="deferred" data-usn-boot disabled>Odloženo</button>
+          </div>
+        </section>
+      </div>
         <section id="usn-data-overview" class="usn-welcome-footer" hidden>
-          <h3>V datech najdete</h3>
           <p><strong id="usn-total-resolutions"></strong> usnesení a <strong id="usn-total-budget-docs"></strong> rozpočtových opatření v aktuální datové sadě.</p>
           <div class="usn-welcome-links">
             <a id="usn-latest-year-link" href="/usneseni/">Nejnovější rok</a>
@@ -248,7 +268,6 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
             <a href="/usneseni/archiv/">Archiv usnesení</a>
           </div>
         </section>
-      </div>
     </div>
   </section>
 
@@ -292,4 +311,5 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
   </ul>
 </div>
 
+<script src="/usneseni/outcomes.js"></script>
 <script src="/usneseni/app.js"></script>

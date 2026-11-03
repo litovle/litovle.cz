@@ -7,6 +7,7 @@
   const SNIPPET_LEN = 180;
   const SEARCH_DEBOUNCE_MS = 140;
   const DEFAULT_SEARCH_YEARS = 5;
+  const outcomes = globalThis.UsneseniOutcomes;
   const FEATURED_TOPICS = [
     ["education", "Školy a školky"],
     ["transport", "Doprava a chodníky"],
@@ -61,6 +62,8 @@
   const meetingSel = document.getElementById("usn-meeting");
   const typeBox = document.getElementById("usn-type");
   const topicSel = document.getElementById("usn-topic");
+  const outcomeSel = document.getElementById("usn-outcome");
+  const outcomeNote = document.getElementById("usn-outcome-note");
   const topicShortcuts = document.getElementById("usn-topics");
   const extraTopicButtons = document.getElementById("usn-extra-topic-buttons");
   const welcomeTopicChoices = document.getElementById("usn-welcome-topic-choices");
@@ -442,6 +445,7 @@
 
     if (q.value) params.set("q", q.value);
     if (selectedTopic()) params.set("category", selectedTopic());
+    if (selectedOutcome()) params.set("outcome", selectedOutcome());
     if (meetingSel?.value || PENDING_MEETING) params.set("meeting", meetingSel?.value || PENDING_MEETING);
 
     for (const y of selectedYears().length ? selectedYears() : [""]) params.append("y", y);
@@ -463,6 +467,7 @@
     if (topicSel && category && (category === "unclassified" || Object.hasOwn(TOPICS, category))) {
       topicSel.value = category;
     }
+    if (outcomeSel) outcomeSel.value = outcomes.definition(params.get("outcome")) ? params.get("outcome") : "";
     if (meetingSel) { PENDING_MEETING = params.get("meeting") || ""; meetingSel.value = MEETING_OPTIONS.includes(PENDING_MEETING) ? PENDING_MEETING : ""; }
 
     const years = params.getAll("y");
@@ -593,6 +598,7 @@
       && TYPE_INPUTS.every(input => input.checked)
       && ORG_INPUTS.every(input => input.checked)
       && !selectedTopic()
+      && !selectedOutcome()
       && sortSel.value === "desc"
     );
   }
@@ -615,6 +621,19 @@
     const category = u.classification?.category;
     if (!selected) return true;
     return selected === "unclassified" ? !category : category === selected;
+  }
+
+  function selectedOutcome() {
+    return outcomes.definition(outcomeSel?.value) ? outcomeSel.value : "";
+  }
+
+  function searchTexts(u) {
+    const outcome = selectedOutcome();
+    return outcome ? outcomes.parts(u, outcome).map(part => outcomes.partText(u, part)) : [searchText(u)];
+  }
+
+  function matchesOutcome(u) {
+    return !selectedOutcome() || outcomes.parts(u, selectedOutcome()).length > 0;
   }
 
   function meetingKey(record) {
@@ -848,12 +867,11 @@
   }
 
   function matchesPhrase(u, phrase) {
-    return searchText(u).includes(phrase);
+    return searchTexts(u).some(text => text.includes(phrase));
   }
 
   function matchesAllTerms(u, terms) {
-    const text = searchText(u);
-    return terms.every(t => text.includes(t));
+    return searchTexts(u).some(text => terms.every(t => text.includes(t)));
   }
 
   // Keep all header/result-state toggles in one place.
@@ -891,7 +909,7 @@
     const isRo = u.id && u.id.startsWith("RO/");
     const matchesType = (isRo && types.includes("ro"))
       || (!isRo && types.includes("usneseni"));
-    return matchesType && organs.includes(normalizedOrgan(u)) && matchesTopic(u);
+    return matchesType && organs.includes(normalizedOrgan(u)) && matchesTopic(u) && matchesOutcome(u);
   }
 
   function filterByCurrentFilters(list, types, organs) {
@@ -900,11 +918,11 @@
 
   // Search in two passes: exact normalized phrase first, all terms second.
   async function findResults(parsed) {
-    const candidates = await collectCandidates(parsed?.anchor, selectedYears());
+    const candidates = await collectCandidates(selectedOutcome() ? null : parsed?.anchor, selectedYears());
     const types = selectedTypes();
     const organs = selectedOrgans();
 
-    if (!parsed) return sortResults(filterByCurrentFilters(candidates, types, organs));
+    if (!parsed) return finishResults(filterByCurrentFilters(candidates, types, organs));
 
     let results = filterByCurrentFilters(
       candidates.filter(u => matchesPhrase(u, parsed.raw)),
@@ -920,7 +938,16 @@
       );
     }
 
-    return sortResults(results);
+    return finishResults(results);
+  }
+
+  async function finishResults(results) {
+    results = sortResults(results);
+    if (selectedOutcome() === "changed") {
+      const years = new Set(results.flatMap(u => outcomes.references(u, "changed")).map(id => id.split("/").pop()));
+      await Promise.all([...years].filter(year => Object.hasOwn(META, year)).map(loadYear));
+    }
+    return results;
   }
 
   function truncatePreview(text) {
@@ -933,8 +960,14 @@
 
   // Keep this preview contract in sync with static_export.usneseni in usneseni-mesta.
   function renderResolutionPreview(u, terms = []) {
-    const items = u.items || [];
-    const summary = summaryLabel(u);
+    const outcome = selectedOutcome();
+    let items = u.items || [];
+    if (outcome && items.length) {
+      items = outcomes.parts(u, outcome).filter(part => terms.every(term => outcomes.partText(u, part).includes(term)));
+    }
+    const summary = outcome && u.items?.length
+      ? `${items.length} odpovídající ${items.length === 1 ? "bod" : items.length < 5 ? "body" : "bodů"} z ${u.items.length}`
+      : summaryLabel(u);
     const parts = summary ? [`<div class="usn-summary">${escapeHtml(summary)}</div>`] : [];
     const subject = truncatePreview(u.subject || "");
     if (subject) parts.push(`<div class="usn-snippet">${highlight(subject, terms)}</div>`);
@@ -1005,9 +1038,19 @@
           }</div>`
           : ""}
       </a>
+      ${renderOutcomeReferences(u)}
     `;
 
     return li;
+  }
+
+  function renderOutcomeReferences(u) {
+    if (selectedOutcome() !== "changed" || !outcomes.parts(u, "changed").length) return "";
+    const ids = outcomes.references(u, "changed");
+    const available = ids.filter(id => DATA_MAP[id.split("/").pop()]?.[id]);
+    const links = available.map(id => `<a href="${escapeHtml(hrefFromRecord(DATA_MAP[id.split("/").pop()][id]))}">${escapeHtml(id)}</a>`);
+    if (!links.length) return '<p class="usn-related-decisions">Původní usnesení se v dostupných datech nepodařilo dohledat.</p>';
+    return `<p class="usn-related-decisions">Původní usnesení: ${links.join(", ")}${available.length < ids.length ? " · další odkazované usnesení není dostupné" : ""}</p>`;
   }
 
   // Main search orchestration: parse input, load candidates, then render state/results.
@@ -1022,7 +1065,7 @@
     syncTopicShortcuts();
     updateSearchPresentation();
 
-    if ((!parsed && !selectedTopic()) || (parsed && !parsed.anchor)) {
+    if ((!parsed && !selectedTopic() && !selectedOutcome()) || (parsed && !parsed.anchor)) {
       setBusy(false);
       if (!parsed) {
         clearResultsState();
@@ -1133,6 +1176,7 @@
     const filters = [];
     const topic = selectedTopic();
     if (topic) filters.push({key: "topic", label: `Téma: ${topic === "unclassified" ? "Bez zařazení" : TOPICS[topic] || topic}`, removable: true});
+    if (selectedOutcome()) filters.push({key: "outcome", label: `Výsledek: ${outcomes.definition(selectedOutcome()).label}`, removable: true});
     const years = selectedYears();
     filters.push({key: "years", label: `Roky: ${years.join(", ") || "žádné"}`,
       removable: years.join("|") !== defaultYears(sortedYearsFromMeta()).join("|")});
@@ -1150,8 +1194,12 @@
   }
 
   function updateSearchPresentation() {
-    const searching = Boolean(q.value.trim() || selectedTopic());
+    const searching = Boolean(q.value.trim() || selectedTopic() || selectedOutcome());
     if (topicShortcuts) topicShortcuts.hidden = searching;
+    if (outcomeNote) {
+      outcomeNote.hidden = !selectedOutcome();
+      outcomeNote.textContent = selectedOutcome() ? outcomes.definition(selectedOutcome()).note + " Filtr vychází z výslovných akcí usnesení; archivní dokumenty a RO tyto údaje nemají." : "";
+    }
     if (!activeFiltersBox) return;
     activeFiltersBox.hidden = !searching && filtersAreDefault();
     activeFiltersBox.replaceChildren();
@@ -1175,6 +1223,7 @@
     else if (key === "organs") ORG_INPUTS.forEach(input => {input.checked = true;});
     else if (key === "sort") {sortSel.value = "desc"; syncSortChips();}
     else if (key === "meeting") meetingSel.value = "";
+    else if (key === "outcome") outcomeSel.value = "";
     else return;
     cancelQueuedSearch();
     q.focus();
@@ -1195,6 +1244,14 @@
     q.value = "";
     topicSel.value = category;
     syncClearButton();
+    q.focus();
+    return search();
+  }
+
+  async function browseOutcome(value) {
+    if (!outcomeSel || !outcomes.definition(value)) return;
+    outcomeSel.value = value;
+    cancelQueuedSearch();
     q.focus();
     return search();
   }
@@ -1313,6 +1370,7 @@
     typeBox.addEventListener("change", searchWithOpenFilters);
     orgBox.addEventListener("change", searchWithOpenFilters);
     topicSel?.addEventListener("change", searchWithOpenFilters);
+    outcomeSel?.addEventListener("change", searchWithOpenFilters);
     meetingSel?.addEventListener("change", searchWithOpenFilters);
 
     sortSel.addEventListener("change", () => {
@@ -1339,8 +1397,10 @@
     topicShortcuts?.addEventListener("click", event => {
       const topic = event.target.closest("[data-topic]");
       const place = event.target.closest("[data-place]");
+      const outcome = event.target.closest("[data-outcome]");
       if (topic) browseTopic(topic.dataset.topic);
       else if (place) browsePlace(place.dataset.place);
+      else if (outcome) browseOutcome(outcome.dataset.outcome);
     });
 
     q.addEventListener("input", () => {

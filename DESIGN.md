@@ -89,6 +89,16 @@ nakonec odkaz na schůzi a poznámka o přepisu. Text má 16px a řádkování 1
 metadata a poznámky 14px. Znění usnesení se při vizuálních úpravách nemění.
 Zdrojový odkaz uvádíme pouze tehdy, pokud ho poskytují existující podklady.
 
+## Automatické pohledy na rozhodnutí
+
+Zkratky Zamítnuto, Změněno a Odloženo používají běžná kompaktní tlačítka vedle
+sekce hledání podle místa. Nastavují filtr ve stávajícím hledání. Vybraný filtr
+se ukazuje mezi aktivními volbami i při sbaleném upřesnění hledání.
+Krátké vysvětlení uvádí příslušnou akci a dostupnost podkladů. Vícedílná
+usnesení zobrazují jen odpovídající body a jejich počet vůči celému usnesení.
+Odkazy na původní revokovaná usnesení jsou samostatné pod výsledkem, mimo
+hlavní odkaz na detail, běžnou modrou barvou a písmem 14px.
+
 ## Přehled roku, schůze a rozpočtová opatření
 
 Roční přehled tvoří kompaktní rozbalovací řádky s viditelnou šipkou.
