@@ -5,12 +5,18 @@ layout: default
 {% assign parts = page.url | split: '/' %}
 {% assign year = parts[2] %}
 
+<div class="usn-section usn-year-page">
 <nav class="breadcrumbs" aria-label="Breadcrumb">
   <a href="{{ '/' | relative_url }}">Úvod</a>
   &nbsp;›&nbsp;
+  {% if page.url == '/rozpoctova-opatreni/' %}
+  <span>Rozpočtová opatření</span>
+  {% else %}
   <a href="{{ '/usneseni/' | relative_url }}">Usnesení</a>
   &nbsp;›&nbsp;
   <span>{{ year }}</span>
+  {% endif %}
 </nav>
 
 {{ content }}
+</div>

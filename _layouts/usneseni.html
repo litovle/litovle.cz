@@ -4,6 +4,13 @@ layout: default
 
 {% assign year = page.datum | slice: 0,4 %}
 
+{% if page.rozpoctove_opatreni %}
+<div class="usn-section usn-budget">
+{% else %}
+<div class="usn-resolution">
+{% endif %}
+<div class="usn-resolution-back" hidden></div>
+
 <nav class="breadcrumbs" aria-label="Breadcrumb">
   <a href="{{ '/' | relative_url }}">Úvod</a>
   &nbsp;›&nbsp;
@@ -25,7 +32,7 @@ layout: default
 
     {% unless page.rozpoctove_opatreni %}
     <header class="usneseni-header">
-        <h1>{{ page.cislo }}</h1>
+        <h1>Usnesení {{ page.cislo | escape }}</h1>
 
         <div class="usneseni-meta">
             <div><strong>Orgán:</strong> {{ page.organ }}</div>
@@ -38,7 +45,6 @@ layout: default
         </div>
     </header>
 
-    <hr>
     {% endunless %}
 
     <div class="usneseni-body">
@@ -46,12 +52,17 @@ layout: default
     </div>
 
     {% unless page.rozpoctove_opatreni %}
-    <hr>
 
+    <footer class="usneseni-footer">
+    <div class="usn-resolution-meeting" hidden></div>
     <p class="usneseni-note">
         Automaticky generovaný přepis veřejného usnesení.
         Zdroj: oficiální dokument města.
     </p>
+    </footer>
     {% endunless %}
 
 </article>
+
+</div>
+<script src="{{ '/usneseni/detail.js' | relative_url }}"></script>

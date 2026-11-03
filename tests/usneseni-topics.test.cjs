@@ -7,8 +7,14 @@ const vm = require("node:vm");
 // Exercise the existing browser functions with fixture data and URL state.
 function app(category = "", query = "") {
   const nodes = new Map();
+  const events = {};
+  const classes = new Set();
+  const panel = {classList: {
+    toggle: (name, enabled) => enabled ? classes.add(name) : classes.delete(name),
+    contains: name => classes.has(name),
+  }};
   function node(id) {
-    if (!nodes.has(id)) nodes.set(id, {value: "", hidden: false, focus: () => {}, replaceChildren: function() {this.children = [];}, appendChild: function(child) {this.children.push(child);}, querySelectorAll: () => []});
+    if (!nodes.has(id)) nodes.set(id, {value: "", hidden: false, children: [], setAttribute: function(k, v) {this[k] = v;}, addEventListener: function(k, fn) {this[k] = fn;}, focus: () => {}, replaceChildren: function() {this.children = [];}, appendChild: function(child) {this.children.push(child);}, querySelectorAll: () => []});
     return nodes.get(id);
   }
   node("usn-topic").value = category;
@@ -31,9 +37,10 @@ function app(category = "", query = "") {
     "/assets/usneseni/archive/data/2026.json": [records[3]],
   };
   const context = vm.createContext({
-    document: {getElementById: node, querySelector: () => null, createElement: () => ({dataset: {}, setAttribute: function(name, value) {this[name] = value;}})},
+    document: {createDocumentFragment: () => ({appendChild: () => {}}), getElementById: node, querySelector: selector => selector === ".usn-search-panel" ? panel : null, createElement: () => ({dataset: {}, setAttribute: function(name, value) {this[name] = value;}})},
     location: {pathname: "/usneseni/", search: "", hash: ""},
     history: {replaceState: (_, __, url) => {context.location.search = url;}},
+    window: {innerWidth: 390, addEventListener: (name, fn) => {events[name] = fn;}},
     URLSearchParams, URL, console, setTimeout, clearTimeout,
     fetch: async url => {requests.push(url); return {ok: true, json: async () => payloads[url] || {}};},
   });
@@ -46,7 +53,7 @@ function app(category = "", query = "") {
     YEAR_INPUTS = [{value: "2026", checked: true}];
     TYPE_INPUTS = [{value: "usneseni", checked: true}, {value: "ro", checked: true}];
     ORG_INPUTS = [{value: "Rada města Litovel", checked: true}, {value: "Zastupitelstvo města Litovel", checked: true}];
-    globalThis.api = {loadYear,
+    globalThis.api = {loadYear, setFiltersOpen, bindUiEvents, truncatePreview, renderResolutionPreview, search, searchWithOpenFilters,
       sources: (resolutions, budgets, archive) => {META = resolutions; RO_META = budgets; ARCHIVE_META = archive;},
       findResults, parseQuery, updateUrl, loadFromUrl, filtersAreDefault,
       paginate, renderResultCard, selectedTopic, loadMeta, renderWelcomeOverview, filterSummary, updateSearchPresentation,
@@ -69,7 +76,7 @@ function app(category = "", query = "") {
       setPage: n => {PAGE = n;}, setOrg: () => {ORG_INPUTS[0].checked = false;}};
   `);
   vm.runInContext(source, context);
-  return {api: context.api, context, node, requests};
+  return {api: context.api, context, node, requests, panel, events};
 }
 
 function ids(rows) {return Array.from(rows, row => row.id);}
@@ -250,4 +257,103 @@ test("year loading requests only the datasets advertised in metadata", async () 
     await api.loadYear("2026");
     assert.deepEqual(requests, expected);
   }
+});
+
+
+test("filter disclosure labels and cached return preserve the search", () => {
+  const {api, node, context, panel, events} = app("transport", "chodniku");
+  api.updateUrl();
+  const url = context.location.search;
+  api.bindUiEvents();
+  node("usn-refine-toggle").click();
+  assert.equal(panel.classList.contains("is-open"), true);
+  assert.equal(node("usn-refine-toggle")["aria-expanded"], "true");
+  assert.equal(node("usn-refine-toggle").textContent, "Skrýt upřesnění");
+  node("usn-refine-toggle").click();
+  assert.equal(node("usn-refine-toggle").textContent, "Upřesnit hledání");
+  api.setFiltersOpen(true);
+  events.pageshow({persisted: true});
+  assert.equal(panel.classList.contains("is-open"), false);
+  assert.equal(node("usn-refine-toggle")["aria-expanded"], "false");
+  assert.equal(context.location.search, url);
+  assert.equal(node("usn-topic").value, "transport");
+  assert.equal(node("usn-q").value, "chodniku");
+});
+
+test("mobile search preserves an explicitly opened filter panel", async () => {
+  const {api, panel} = app("transport", "chodniku");
+  api.setFiltersOpen(true);
+  await api.search();
+  assert.equal(panel.classList.contains("is-open"), true);
+  api.setFiltersOpen(false);
+  await api.search();
+  assert.equal(panel.classList.contains("is-open"), false);
+});
+
+test("preview truncation marks shortened text and leaves short text intact", () => {
+  const {api} = app();
+  assert.equal(api.truncatePreview("Krátké usnesení."), "Krátké usnesení.");
+  const preview = api.truncatePreview("Dlouhé usnesení o opravě chodníku. ".repeat(15));
+  assert.ok(preview.endsWith("…"));
+  assert.ok(preview.length <= 181);
+  const card = api.renderResultCard({id: "RM/1/1/2026", subject: "<text> ".repeat(50)}, null);
+  assert.ok(card.innerHTML.includes("&lt;text&gt;"));
+  assert.ok(card.innerHTML.includes("…"));
+});
+
+
+test("opening filters reveals selected older years without changing the selection", () => {
+  const {api, node} = app();
+  api.sources(Object.fromEntries([2031, 2030, 2029, 2028, 2027, 2026].map(y => [y, {count: 1}])), {}, {});
+  api.setFiltersOpen(false);
+  assert.notEqual(node("usn-older-years").open, true);
+  api.setFiltersOpen(true);
+  assert.equal(node("usn-older-years").open, true);
+  assert.equal(api.filterSummary().find(f => f.key === "years").label, "Roky: 2026");
+});
+
+test("recent-year selections do not force the older-years disclosure open", () => {
+  const {api, node} = app();
+  api.setFiltersOpen(true);
+  assert.notEqual(node("usn-older-years").open, true);
+});
+
+test("RM/2589/82/2026 shows all three original labels and school reports", () => {
+  const {api} = app();
+  const records = JSON.parse(fs.readFileSync(path.join(__dirname, "../assets/usneseni/data/2026.json"), "utf8"));
+  const resolution = records.find(record => record.id === "RM/2589/82/2026");
+  const card = api.renderResultCard(resolution, null).innerHTML;
+  assert.ok(card.includes("3 rozhodnutí"));
+  for (const label of ["a", "b", "c"]) assert.ok(card.includes(`class="usn-action-label">${label})</strong>`));
+  assert.equal((card.match(/<li>/g) || []).length, 3);
+  assert.ok(card.indexOf("Jungmannova") < card.indexOf("Vítězná"));
+  assert.ok(card.indexOf("Vítězná") < card.indexOf("Nasobůrky"));
+});
+
+test("previews include subjects and single points, and limit longer item lists", () => {
+  const {api} = app();
+  const single = api.renderResolutionPreview({actions: ["schvaluje"], subject: "Změny programu", items: [{label: "a", text: "doplnění programu"}]});
+  assert.ok(single.includes("Změny programu"));
+  assert.ok(single.includes('class="usn-action-label">a)</strong> doplnění programu'));
+  const multiple = api.renderResolutionPreview({items: Array.from({length: 5}, (_, i) => ({label: String(i + 1), text: `Rozhodnutí číslo ${i + 1}`}))});
+  assert.equal((multiple.match(/<li>/g) || []).length, 3);
+  assert.ok(multiple.includes("5 rozhodnutí"));
+  assert.ok(multiple.includes("Další 2 rozhodnutí"));
+  assert.ok(!multiple.includes("Rozhodnutí číslo 4"));
+  assert.ok(!multiple.includes("Rozhodnutí číslo 5"));
+});
+
+test("item previews escape once and highlight accented text without changing labels", () => {
+  const {api} = app();
+  const resolution = {items: [{label: "<a>", text: 'lékař <img src=x onerror=alert(1)> & "citace"'}]};
+  for (const terms of [[], ["lekar"]]) {
+    const preview = api.renderResolutionPreview(resolution, terms);
+    assert.ok(!preview.includes("<img"));
+    assert.ok(preview.includes("&lt;img"));
+    assert.ok(preview.includes("&amp;"));
+    assert.ok(!preview.includes("&amp;lt;"));
+    assert.ok(preview.includes("&lt;a&gt;)"));
+    if (terms.length) assert.ok(preview.includes("<mark>lékař</mark>"));
+  }
+  assert.equal(api.truncatePreview("  Krátký  text\nbez ořezu. "), "Krátký text bez ořezu.");
 });

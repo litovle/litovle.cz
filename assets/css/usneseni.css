@@ -1,0 +1,223 @@
+/* Shared visual rules for search, meeting lists, resolutions and budget measures. */
+:is(.usn-app, .usn-section, .usn-resolution) {
+  --space-section: 32px;
+  --space-panel: 16px;
+  --radius-panel: 12px;
+  --radius-control: 8px;
+  --surface-panel: #fff;
+  --border-subtle: #d4d6cc;
+  --text-muted: #52606b;
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+:is(.usn-section, .usn-resolution) *,
+:is(.usn-section, .usn-resolution) *::before,
+:is(.usn-section, .usn-resolution) *::after {
+  box-sizing: border-box;
+}
+
+:is(.usn-section, .usn-resolution) [hidden] { display: none !important; }
+:is(.usn-section, .usn-resolution) a { color: var(--brand-blue); text-underline-offset: .15em; }
+:is(.usn-section, .usn-resolution) :is(a, summary, button):focus-visible {
+  outline: 2px solid var(--brand-blue);
+  outline-offset: 3px;
+}
+
+.usn-section > h1, .usn-budget .usn-ro-hero h1, .usn-resolution h1,
+.content:has(.usn-app) > h1 {
+  font-size: var(--text-title);
+  line-height: 1.2;
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+}
+.usn-section > h1, .usn-budget .usn-ro-hero h1, .usn-resolution h1 { text-align: left; }
+.usn-section h2 { font-size: var(--text-section); line-height: 1.3; margin: var(--space-section) 0 16px; }
+.usn-section h3 { font-size: var(--text-body); line-height: 1.5; }
+.content:has(.usn-app) > .subtitle { font-size: var(--text-body); line-height: 1.5; }
+:is(.usn-section, .usn-resolution) .breadcrumbs {
+  font-size: var(--text-small);
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+  overflow-wrap: anywhere;
+}
+:is(.usn-section, .usn-resolution) .breadcrumbs a { color: var(--brand-blue); }
+.usn-section :is(.usn-meta, .usn-meta-detail, .usn-info, .usn-more),
+.usn-app :is(.usn-results-kicker, .archiv-label, .archiv-years a, small) {
+  font-size: var(--text-small);
+  color: var(--text-muted);
+}
+.usn-section > :is(.usn-meta, .usn-meta-detail) { margin: 0 0 16px; }
+
+/* The same result rows are used in search, meeting pages and the RO listing. */
+:is(.usn-app, .usn-section) .usn-results { list-style: none; padding: 0; margin: 0; }
+:is(.usn-app, .usn-section) .usn-result { padding: 16px 0; border-bottom: 1px solid var(--border-subtle); }
+:is(.usn-app, .usn-section) .usn-card { display: block; color: var(--primary-text-color); border-radius: 3px; text-decoration: none; overflow-wrap: anywhere; }
+:is(.usn-app, .usn-section) .usn-card:hover { background: #f6f2e9; }
+:is(.usn-app, .usn-section) .usn-card:hover .usn-snippet { text-decoration: none; }
+:is(.usn-app, .usn-section) .usn-card:hover .usn-head strong { text-decoration: underline; }
+:is(.usn-app, .usn-section) .usn-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .7rem; }
+:is(.usn-app, .usn-section) .usn-head strong { color: var(--brand-blue); font-size: var(--text-body); }
+:is(.usn-app, .usn-section) :is(.usn-date, .usn-summary) { font-size: var(--text-small); color: var(--text-muted); font-style: normal; }
+:is(.usn-app, .usn-section) .usn-summary { margin: .3rem 0; }
+:is(.usn-app, .usn-section) .usn-snippet {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  max-height: 4.5em;
+  overflow: hidden;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--primary-text-color);
+}
+:is(.usn-app, .usn-section) .usn-snippet::after { content: none; }
+:is(.usn-app, .usn-section) .usn-action-preview { list-style: none; margin: 8px 0 0; padding: 0; }
+:is(.usn-app, .usn-section) .usn-action-preview li {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  max-height: 4.5em;
+  overflow: hidden;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+:is(.usn-app, .usn-section) .usn-action-preview li + li { margin-top: 8px; }
+:is(.usn-app, .usn-section) .usn-action-label { font-weight: 600; }
+:is(.usn-app, .usn-section) .usn-actions-more { margin-top: 8px; color: var(--text-muted); font-size: var(--text-small); }
+.usn-app :is(.usn-years, .usn-pager) { font-size: var(--text-body); }
+.usn-app :is(.usn-ro-match-more, .usn-ro-match-badge) { font-size: var(--text-small); }
+.usn-app .usn-ro-match-item { font-size: var(--text-body); }
+.usn-app .usn-ro-match-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+  color: var(--primary-text-color);
+}
+.usn-app .usn-ro-match-item > span:last-child { grid-column: 1 / -1; }
+.usn-app .usn-ro-match-item:hover { background: #f6f2e9; }
+.usn-app .usn-ro-match-item strong { color: var(--brand-blue); }
+.usn-app .usn-ro-match-badge { border: 0; border-radius: 0; padding: 0; background: none; color: var(--text-muted); }
+.usn-app .usn-ro-match-more { color: var(--text-muted); }
+
+/* Meetings are compact disclosure rows, with an explicit open/close indicator. */
+.usn-section .usn-year-groups, .usn-section .usn-archive-years { display: grid; gap: 0; margin: 0; }
+.usn-section .usn-year-group {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.usn-section .usn-year-group > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  position: relative;
+  margin: 0;
+  padding: 16px 32px 16px 0;
+  list-style: none;
+  cursor: pointer;
+}
+.usn-section .usn-year-group > summary::after {
+  content: "";
+  position: absolute;
+  top: 22px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  color: var(--brand-blue);
+}
+.usn-section .usn-year-group[open] > summary::after { top: 26px; transform: rotate(225deg); }
+.usn-section .usn-year-group > summary:hover { background: #f6f2e9; }
+.usn-section .usn-year-group-title { font-size: var(--text-body); font-weight: 600; color: var(--primary-text-color); }
+.usn-section :is(.usn-year-group-count, .usn-archive-meeting-count) { font-size: var(--text-small); color: var(--text-muted); }
+.usn-section .usn-year-group .usn-more { margin: 0 0 8px; padding: 0; }
+.usn-section .usn-year-group > ul { list-style: none; margin: 0 0 16px; padding: 0; }
+.usn-section .usn-year-group li + li { margin-top: 0; }
+.usn-section .usn-year-group > ul > li { margin: 0; border-top: 1px solid #e2e8f0; }
+.usn-section .usn-year-group > ul > li > a { display: block; padding: 8px 0; width: fit-content; }
+.usn-section .usn-year-ro-list { display: block; margin: 0; }
+.usn-section .usn-year-ro-card { display: block; padding: 16px 0; border: 0; border-bottom: 1px solid var(--border-subtle); border-radius: 0; background: none; }
+.usn-section .usn-year-ro-card > a { display: inline-flex; flex-wrap: wrap; gap: .3rem .7rem; color: var(--brand-blue); font-weight: 600; }
+.usn-section .usn-year-ro-card .usn-date { font-weight: 400; }
+
+/* Ordinary resolutions and RO headers share one simple reading surface. */
+.usn-resolution { line-height: 1.6; }
+.usn-resolution-back p { margin: 0 0 12px; }
+.usn-resolution .usneseni, .usn-budget .usn-ro-hero { padding: var(--space-panel); background: var(--surface-panel); border: 0; border-radius: var(--radius-panel); }
+.usn-resolution .usneseni-header { margin-bottom: var(--space-section); }
+.usn-resolution .usneseni-meta { display: flex; flex-wrap: wrap; gap: 4px 24px; font-size: var(--text-small); color: var(--text-muted); }
+.usn-resolution .usneseni-body { overflow-wrap: anywhere; }
+.usn-resolution .usneseni-body p { margin: 0 0 16px; }
+.usn-resolution .usneseni-body :is(ul, ol) { margin: 0 0 16px; padding-left: 1.5em; }
+.usn-resolution .usneseni-body li + li { margin-top: 8px; }
+.usn-resolution .usneseni-body :is(h2, h3) { font-size: var(--text-section); line-height: 1.3; margin: 24px 0 12px; }
+.usn-resolution .usneseni-body :is(h4, h5, h6) { font-size: var(--text-body); margin: 16px 0 8px; }
+.usn-resolution .usneseni-body > :last-child { margin-bottom: 0; }
+.usn-resolution .usneseni-footer { margin-top: var(--space-section); }
+.usn-resolution-meeting p { margin: 0 0 12px; }
+.usn-resolution .usneseni-note { font-size: var(--text-small); color: var(--text-muted); margin: 0; }
+
+/* Accounting content retains its structure and anchors, with shared spacing and type. */
+.usn-budget .usn-ro-hero { margin: 0 0 var(--space-section); }
+.usn-budget .usn-ro-kicker { margin: 0 0 8px; color: var(--text-muted); font-size: var(--text-small); font-weight: 400; text-transform: none; letter-spacing: normal; }
+.usn-budget .usn-ro-hero h1 { margin-bottom: 16px; }
+.usn-budget .usn-ro-lead { margin: 0; color: var(--primary-text-color); font-size: var(--text-body); line-height: 1.6; }
+.usn-budget .usn-ro-facts { gap: 4px 24px; margin-top: 16px; }
+.usn-budget .usn-ro-facts span { display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; background: none; color: var(--text-muted); font-size: var(--text-small); font-weight: 400; }
+.usn-budget .usn-ro-section { margin: var(--space-section) 0; }
+.usn-budget .usn-rz-list { gap: 16px; }
+.usn-budget .usn-rz-group { background: var(--surface-panel); border: 0; border-radius: var(--radius-panel); box-shadow: none; scroll-margin-top: 16px; overflow-wrap: anywhere; }
+.usn-budget .usn-rz-group:target { outline: 2px solid var(--brand-blue); outline-offset: 3px; box-shadow: none; }
+.usn-budget .usn-rz-group-head { padding: var(--space-panel); gap: 8px 16px; border-bottom: 1px solid #e2e8f0; background: none; }
+.usn-budget .usn-rz-group-head h3 { font-size: var(--text-body); margin: 0; }
+.usn-budget .usn-rz-count { font-size: var(--text-small); color: var(--text-muted); }
+.usn-budget .usn-rz-title { padding: 16px 16px 0; font-size: var(--text-body); }
+.usn-budget .usn-rz-note { padding: var(--space-panel); background: none; border: 0; line-height: 1.6; }
+.usn-budget .usn-rz-explanation { margin: 0; padding: var(--space-panel); border: 0; background: none; color: var(--primary-text-color); line-height: 1.6; font-weight: 600; }
+.usn-budget .usn-rz-details { margin: 16px 0 0; border-top: 1px solid #e2e8f0; background: none; }
+.usn-budget .usn-rz-details > summary { padding: var(--space-panel); color: var(--brand-blue); font-weight: 600; }
+.usn-budget .usn-rz-totals { padding: var(--space-panel); gap: 8px 16px; background: none; border-bottom-color: #e2e8f0; }
+.usn-budget .usn-rz-row { padding: var(--space-panel); background: none; }
+.usn-budget .usn-rz-row-section, .usn-budget .usn-rz-total-label, .usn-budget .usn-code-details { font-size: var(--text-small); color: var(--text-muted); }
+.usn-budget .usn-code-details summary { cursor: pointer; }
+.usn-budget .usn-code-details dl { gap: 8px 16px; }
+.usn-budget .usn-code-details dl > div { padding: 0; border-radius: 0; background: none; }
+.usn-budget .usn-code-help { padding: var(--space-panel); margin: var(--space-section) 0; border: 0; border-radius: var(--radius-panel); background: var(--surface-panel); }
+.usn-budget .usn-summary-list { gap: 8px 16px; }
+.usn-budget .usn-summary-list > div { padding: 0; border-radius: 0; background: none; }
+.usn-budget .usn-summary-list dt { font-size: var(--text-small); color: var(--text-muted); }
+.usn-budget :is(table, pre) { display: block; max-width: 100%; overflow-x: auto; }
+
+/* Archive records use the same typography and flat list treatment. */
+.usn-section .usn-archive-summary { color: var(--text-muted); font-size: var(--text-small); gap: 8px 16px; }
+.usn-section :is(.usn-archive-summary span, .usn-archive-meeting-count) { border: 0; border-radius: 0; padding: 0; background: none; }
+.usn-section .usn-archive-meeting a { padding: 12px 0; }
+.usn-section .usn-archive-meeting-meta { font-size: var(--text-small); color: var(--text-muted); }
+.usn-section .usn-archive-text { border: 0; border-radius: var(--radius-panel); padding: var(--space-panel); font-size: var(--text-body); line-height: 1.6; }
+
+@media (max-width: 700px) {
+  .usn-section > h1, .usn-budget .usn-ro-hero h1, .usn-resolution h1,
+  .content:has(.usn-app) > h1 { font-size: var(--text-section); }
+  .usn-budget .usn-rz-group-head { display: flex; flex-wrap: wrap; }
+  .usn-budget .usn-rz-row-main { grid-template-columns: 1fr; }
+}
+
+@media (pointer: coarse) {
+  .usn-section .usn-year-group > ul > li > a { min-height: 44px; }
+  .usn-budget .usn-code-details summary { min-height: 44px; padding-block: 10px; }
+}

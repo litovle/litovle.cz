@@ -1,4 +1,8 @@
 :root {
+    --text-small: .875rem;
+    --text-body: 1rem;
+    --text-section: 1.5rem;
+    --text-title: 2rem;
     --primary-text-color: #1f2933;
     --brand-blue: #0f46ab;
     --brand-navy: #04152f;
