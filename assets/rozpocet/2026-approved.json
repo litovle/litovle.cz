@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "year": 2026,
+  "title": "Schválený rozpočet města Litovel na rok 2026",
+  "approved_date": "2025-12-11",
+  "resolution_id": "ZM/6/23/2025",
+  "resolution_href": "/usneseni/2025/ZM-6-23-2025/",
+  "source_url": "https://www.litovel.eu/filemanager/files/4893150.pdf",
+  "source_copy": "/assets/rozpocet/2026-approved.pdf",
+  "source_sha256": "4da48862ecca266032a04bd500d1fa5820ec2b9a1c9b8c54e1d8ec9650aee19a",
+  "summary_source_page": 1,
+  "scopes": {
+    "combined": {
+      "income_minor": 44411357400,
+      "expenditure_minor": 70581356300,
+      "balance_minor": -26169998900,
+      "financing_minor": 26169998900
+    },
+    "main": {
+      "income_minor": 41944257400,
+      "expenditure_minor": 68315016300,
+      "balance_minor": -26370758900,
+      "financing_minor": 26370758900
+    },
+    "funds": {
+      "income_minor": 2467100000,
+      "expenditure_minor": 2266340000,
+      "balance_minor": 200760000,
+      "financing_minor": -200760000
+    }
+  },
+  "expenditure_sectors": [
+    {
+      "code": "1014",
+      "label": "Ozdrav.hosp.zvířat,pol.a spec.plod.a zvl.vet.péče",
+      "amount_minor": 346434000,
+      "source_page": 3
+    },
+    {
+      "code": "1036",
+      "label": "Správa v lesním hospodářství",
+      "amount_minor": 6000000,
+      "source_page": 3
+    },
+    {
+      "code": "1037",
+      "label": "Celospolečenské funkce lesů",
+      "amount_minor": 25000000,
+      "source_page": 3
+    },
+    {
+      "code": "1039",
+      "label": "Ostatní záležitosti lesního hospodářství",
+      "amount_minor": 6500000,
+      "source_page": 3
+    },
+    {
+      "code": "2115",
+      "label": "Úspora energie a obnovitelné zdroje",
+      "amount_minor": 20500000,
+      "source_page": 3
+    },
+    {
+      "code": "2141",
+      "label": "Vnitřní obchod",
+      "amount_minor": 4230000,
+      "source_page": 3
+    },
+    {
+      "code": "2169",
+      "label": "Ostatní správa v průmyslu, stavebnictví, obchodu a službách",
+      "amount_minor": 40000000,
+      "source_page": 3
+    },
+    {
+      "code": "22XX",
+      "label": "Doprava",
+      "amount_minor": 4489270100,
+      "source_page": 3
+    },
+    {
+      "code": "23XX",
+      "label": "Vodní hospodářství",
+      "amount_minor": 7989000000,
+      "source_page": 3
+    },
+    {
+      "code": "3111",
+      "label": "Mateřské školy",
+      "amount_minor": 892900000,
+      "source_page": 3
+    },
+    {
+      "code": "3113",
+      "label": "Základní školy",
+      "amount_minor": 3518625000,
+      "source_page": 3
+    },
+    {
+      "code": "3141",
+      "label": "Školní stravování",
+      "amount_minor": 569600000,
+      "source_page": 3
+    },
+    {
+      "code": "3314",
+      "label": "Činnosti knihovnické",
+      "amount_minor": 506800000,
+      "source_page": 3
+    },
+    {
+      "code": "3315",
+      "label": "Činnosti muzeí a galerií",
+      "amount_minor": 793800000,
+      "source_page": 3
+    },
+    {
+      "code": "3316",
+      "label": "Vydavatelská činnost",
+      "amount_minor": 15000000,
+      "source_page": 3
+    },
+    {
+      "code": "3319",
+      "label": "Ostatní záležitosti kultury",
+      "amount_minor": 158700000,
+      "source_page": 3
+    },
+    {
+      "code": "3322",
+      "label": "Zachování a obnova kulturních památek",
+      "amount_minor": 300000000,
+      "source_page": 3
+    },
+    {
+      "code": "3326",
+      "label": "Pořízení, zachování a obnova hodnot místního kulturního, národního a hist. povědomí",
+      "amount_minor": 53000000,
+      "source_page": 3
+    },
+    {
+      "code": "3341",
+      "label": "Rozhlas a televize",
+      "amount_minor": 45000000,
+      "source_page": 3
+    },
+    {
+      "code": "3349",
+      "label": "Ostatní záležitosti sdělovacích prostředků",
+      "amount_minor": 90100000,
+      "source_page": 3
+    },
+    {
+      "code": "3392",
+      "label": "Zájmová činnost v kultuře",
+      "amount_minor": 1287830000,
+      "source_page": 3
+    },
+    {
+      "code": "3399",
+      "label": "Ostatní záležitosti kultury, církví a sděl. prostř.",
+      "amount_minor": 62000000,
+      "source_page": 3
+    },
+    {
+      "code": "3412",
+      "label": "Sportovní zařízení ve vlastnictví obce",
+      "amount_minor": 6216497200,
+      "source_page": 3
+    },
+    {
+      "code": "3421",
+      "label": "Využití volného času dětí a mládeže",
+      "amount_minor": 285000000,
+      "source_page": 3
+    },
+    {
+      "code": "3429",
+      "label": "Ostatní zájmová činnost a rekreace",
+      "amount_minor": 870397800,
+      "source_page": 3
+    },
+    {
+      "code": "361X",
+      "label": "Rozvoj bydlení a bytové hospodářství",
+      "amount_minor": 4907700000,
+      "source_page": 3
+    },
+    {
+      "code": "363X",
+      "label": "Komunální služby a územní rozvoj",
+      "amount_minor": 9939484300,
+      "source_page": 3
+    },
+    {
+      "code": "3699",
+      "label": "Ostatní záležitosti bydlení, komunálních služeb a územního rozvoje",
+      "amount_minor": 43560000,
+      "source_page": 3
+    },
+    {
+      "code": "372X",
+      "label": "Nakládání s odpady",
+      "amount_minor": 5056319200,
+      "source_page": 3
+    },
+    {
+      "code": "3733",
+      "label": "Monitoring půdy a podzemní vody",
+      "amount_minor": 31000000,
+      "source_page": 3
+    },
+    {
+      "code": "3745",
+      "label": "Péče o vzhled obcí a veřejnou zeleň",
+      "amount_minor": 207000000,
+      "source_page": 3
+    },
+    {
+      "code": "3749",
+      "label": "Ostatní činnosti k ochraně přírody a krajiny",
+      "amount_minor": 10000000,
+      "source_page": 3
+    },
+    {
+      "code": "3792",
+      "label": "Ekologická výchova a osvěta",
+      "amount_minor": 3000000,
+      "source_page": 3
+    },
+    {
+      "code": "3900",
+      "label": "Ost. činnosti souvis. se službami pro fyzické osoby",
+      "amount_minor": 78200000,
+      "source_page": 3
+    },
+    {
+      "code": "4349",
+      "label": "Ost.soc.péče a pomoc ostatním skupinám fyzických osob",
+      "amount_minor": 10400000,
+      "source_page": 3
+    },
+    {
+      "code": "52XX",
+      "label": "Civilní připravenost na krizové stavy",
+      "amount_minor": 138000000,
+      "source_page": 3
+    },
+    {
+      "code": "5311",
+      "label": "Bezpečnost a veřejný pořádek",
+      "amount_minor": 1219900000,
+      "source_page": 3
+    },
+    {
+      "code": "551X",
+      "label": "Požární ochrana",
+      "amount_minor": 1730000000,
+      "source_page": 3
+    },
+    {
+      "code": "6112",
+      "label": "Zastupitelstva obcí",
+      "amount_minor": 735300000,
+      "source_page": 3
+    },
+    {
+      "code": "6115",
+      "label": "Volby do zastupitelstev územních samosprávných celků",
+      "amount_minor": 100000000,
+      "source_page": 3
+    },
+    {
+      "code": "6171",
+      "label": "Činnost místní správy",
+      "amount_minor": 8714568700,
+      "source_page": 3
+    },
+    {
+      "code": "6223",
+      "label": "Mezinárodní spolupráce jinde nezařazená",
+      "amount_minor": 10000000,
+      "source_page": 3
+    },
+    {
+      "code": "6310",
+      "label": "Obecné příjmy a výdaje z finančních operací",
+      "amount_minor": 933000000,
+      "source_page": 3
+    },
+    {
+      "code": "6320",
+      "label": "Pojištění funkčně nespecifikované",
+      "amount_minor": 228200000,
+      "source_page": 3
+    },
+    {
+      "code": "6330",
+      "label": "Převody vlastním fondům v rozpočtech územní úrovně",
+      "amount_minor": 2454700000,
+      "source_page": 3
+    },
+    {
+      "code": "6399",
+      "label": "Ostatní finanční operace",
+      "amount_minor": 3000000000,
+      "source_page": 3
+    },
+    {
+      "code": "6402",
+      "label": "Finanční vypořádání",
+      "amount_minor": 10000000,
+      "source_page": 3
+    },
+    {
+      "code": "6409",
+      "label": "Ostatní činnosti jinde nezařazené",
+      "amount_minor": 162500000,
+      "source_page": 3
+    }
+  ]
+}

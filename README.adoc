@@ -60,6 +60,77 @@ ale jeho zpřehlednění a dlouhodobá dostupnost.
 
 Projekt a veškeré odkazované projekty jsou vedeny transparentně a veškeré změny jsou veřejně dohledatelné v historii konkrétního repozitáře.
 
+== Rozpočtové změny v grafech
+
+Stránka `/rozpocet/` je jednoduchý občanský přehled investic: srovnání přímo
+přiřazených investic do místních částí v Kč i na obyvatele a členění podle účelu.
+Číselné srovnání zatím zůstává skryté: chybí úplný výchozí investiční rozpis,
+ověřené počty obyvatel a nezávislý kontrolní souhrn upravených investic.
+Chybějící podklady se nikdy nezobrazují jako nuly a samotné změny nenahrazují
+celkové alokace. `assets/rozpocet/2026-investments.json` tento stav výslovně
+zachycuje. Podmínky doplnění dat a návrh žádosti městu jsou v `docs/`;
+žádost nebyla odeslána. Kontrola připravenosti: `node scripts/check-investments.cjs`
+(pro zveřejnění čísel přidejte `--require-ready`).
+
+Výchozí srovnání je na obyvatele, přepínač mění pouze jednotku grafu.
+Počet obyvatel zůstává po celý rok stejný podle uvedeného referenčního data.
+Skupina bez přiřazení se zobrazuje odděleně a nemá přepočet na obyvatele.
+Účel investic vychází z ODPA, přiřazení místní části z ORJ; názvy v popisu
+nerozhodují. Testovací kompletní podklady jsou pouze v `tests/fixtures/`
+a do sestaveného webu nevstupují.
+
+Podrobná stránka `/rozpocet/podklady/` zobrazuje celý schválený rozpočet města a fondů na rok 2026
+a kumulativní a měsíční změny výdajů schválené během roku 2026. Skutečné
+čerpání nezobrazuje. Investiční výdaje zahrnují položky třídy 6; všechny výdaje přidávají
+třídu 5. V grafech jsou vnitřní převody mezi vlastními účty a fondy vynechány.
+Hlavní přehled slovně uvádí, o kolik se plánované výdaje zvýšily nebo snížily.
+Součty přidaných a odebraných částek jsou až v rozbalovacím vysvětlení výpočtu,
+protože přesuny mezi výdajovými řádky mohou oba součty výrazně zvýšit.
+
+Výchozí rozpočet v `assets/rozpocet/2026-approved.json` je ověřený přepis
+souhrnné tabulky a výdajových oblastí schváleného rozpočtu. Obsahuje URL zdroje,
+datum schválení, odkaz na usnesení ZM/6/23/2025, čísla stran a SHA-256 uložené
+kopie `2026-approved.pdf`. Součty města, fondů a výdajových oblastí ověřují testy.
+Tento roční podklad zůstává samostatný; běžný export změn jej nepřepisuje.
+
+Celoměstský přehled uvádí původně schválené příjmy, výdaje a financování a
+součty po zahrnutých změnách k vybranému datu. Na rozdíl od grafů zachovává
+hrubé členění oficiálního dokumentu, tedy i vlastní převody mezi účty a fondy.
+Přepočet vyžaduje ověřené součty a úplnost řádků každého opatření a kontrolu
+rovnosti příjmy + financování = výdaje. Při neúplných datech zůstává dostupný
+výchozí rozpočet a přepočtené hodnoty se nezobrazí. Filtry místa a typu výdajů
+celoměstský souhrn neomezují. Výchozí investiční částky pro jednotlivé místní
+části souhrnný dokument neobsahuje; v jejich grafech proto zůstávají pouze změny.
+
+Data `assets/rozpocet/2026.json` a kontrolní přehled `2026-review.json` generuje
+pipeline `usneseni-mesta` ze zdrojových PDF. Účetní kódy se čtou podle názvů a
+geometrie sloupců, nikoli pozic v `raw_codes`. Texty, identifikátory a odkazy
+pocházejí z podkladů; projekty ani lokality se neodvozují pomocí AI.
+Řádky s neověřenými účetními poli se nezapočítávají a jejich pokrytí je
+uvedeno na stránce. Neúplný identifikátor RZ nebrání započítání ověřené
+výdajové částky; odkaz pak vede na celé opatření.
+
+Místní části se filtrují výhradně podle ověřeného kódu ORJ 301–311, nikoli
+podle názvu v textu. Filtr ovlivňuje grafy, součty, účetní řádky v tabulce i CSV;
+u změny obsahující více míst započítá jen řádky zvoleného místa. Výchozí zobrazení
+zahrnuje celé město. Skupina Bez přiřazení místní části může obsahovat centrální
+Litovel, společnou infrastrukturu i místní části; nejde o součet pro centrum.
+Filtr tak ukazuje přímo přiřazené změny a nezahrnuje všechny přínosy pro dané místo.
+
+Filtry měsíce, druhu výdajů, místní části a hledání podrobné stránky lze sdílet URL. Starší
+odkazy na `/rozpocet/` s `mode=all` nebo `q` přecházejí na podklady se zachováním parametrů;
+`place` a `month` fungují i na novém přehledu. Hledání omezuje pouze
+tabulku, výběr bodu grafu nebo měsíčního sloupce zobrazí související podklady.
+CSV obsahuje právě zobrazené záznamy. Regresní testy výpočtů a vazeb na zdroje:
+
+[source,shell]
+----
+node --check rozpocet/app.js
+node --check rozpocet/model.js
+node --test tests/*.test.cjs
+jekyll build
+----
+
 == Ověření vyhledávání
 
 Regresní testy filtru témat, URL a výběru dokumentů používají vestavěný Node.js

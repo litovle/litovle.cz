@@ -9,3 +9,5 @@ permalink: pretty
 
 exclude:
   - tests
+  - docs
+  - scripts

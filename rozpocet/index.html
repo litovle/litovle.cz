@@ -1,0 +1,80 @@
+---
+layout: default
+title: Investice v Litovli a místních částech
+description: "Investice do místních částí v celkových částkách, na obyvatele a podle účelu. Srovnání pouze z úplných a ověřených oficiálních podkladů."
+---
+<link rel="stylesheet" href="{{ '/rozpocet/style.css' | relative_url }}">
+<div class="budget-app investment-app" data-amendments-url="{{ '/assets/rozpocet/2026.json' | relative_url }}" data-investments-url="{{ '/assets/rozpocet/2026-investments.json' | relative_url }}" data-details-url="{{ '/rozpocet/podklady/' | relative_url }}">
+  <header class="budget-hero">
+    <p class="budget-eyebrow">Plánované investice · 2026</p>
+    <h1>Investice v Litovli<br>a místních částech</h1>
+    <p class="budget-lead">Kolik je v rozpočtu určeno na investice v jednotlivých místních částech a na co mají peníze jít?</p>
+    <p class="budget-context">Sledujeme plánované investice přímo přiřazené místní části. Částky neznamenají skutečně utracené peníze.</p>
+    <a href="{{ '/rozpocet/podklady/' | relative_url }}">Celý rozpočet, podklady a výpočty →</a>
+  </header>
+  <p id="investment-status" role="status">Ověřujeme dostupnost podkladů…</p>
+  <section id="investment-pending" class="budget-panel investment-pending" aria-labelledby="investment-pending-title">
+    <p class="budget-eyebrow">Srovnání zatím není dostupné</p>
+    <h2 id="investment-pending-title">Na úplné částky ještě čekáme</h2>
+    <p>Máme schválený souhrnný rozpočet a jeho změny. Pro srovnání investic v místních částech potřebujeme také úplný výchozí investiční plán a ověřené počty obyvatel.</p>
+    <p>Samotné změny neříkají, kolik má místní část celkem dostat. Proto z nich přepočet na obyvatele nezobrazujeme.</p>
+    <a href="{{ '/rozpocet/podklady/' | relative_url }}">Prohlédnout dostupný rozpočet a jeho změny →</a>
+  </section>
+  <noscript><p>Interaktivní srovnání potřebuje JavaScript a úplné podklady. <a href="{{ '/rozpoctova-opatreni/' | relative_url }}">Původní rozpočtová opatření</a> lze číst samostatně.</p></noscript>
+  <div id="investment-content" hidden>
+    <section class="budget-controls" aria-label="Období investičního plánu">
+      <label>Plán po změnách do měsíce<select id="investment-month"></select></label>
+      <p id="investment-date"></p>
+    </section>
+    <section class="budget-panel" aria-labelledby="investment-places-title">
+      <div class="budget-panel-head">
+        <div><p class="budget-eyebrow">Srovnání místních částí</p><h2 id="investment-places-title">Kolik investic připadá na jednotlivé místní části?</h2></div>
+        <div class="investment-toggle" role="group" aria-label="Jednotka srovnání">
+          <button type="button" id="investment-per-person" aria-pressed="true">Kč na obyvatele</button>
+          <button type="button" id="investment-total" aria-pressed="false">Kč celkem</button>
+        </div>
+      </div>
+      <p class="budget-help">Vyberte místní část a podívejte se, na co jsou její investice určeny. Jeden velký stavební projekt může srovnání v jediném roce výrazně ovlivnit.</p>
+      <div id="investment-places" class="investment-bars" aria-label="Přímo přiřazené plánované investice podle místních částí"></div>
+      <p id="investment-population" class="budget-footnote"></p>
+      <aside class="investment-city" aria-labelledby="investment-city-title">
+        <h3 id="investment-city-title">A co investice ve zbytku města?</h3>
+        <p>Plánované investice v celém městě: <strong id="investment-city-total"></strong></p>
+        <p>Investice bez přiřazení místní části: <strong id="investment-unassigned"></strong></p>
+        <p class="budget-help">Tato část může zahrnovat centrální Litovel, společnou infrastrukturu i investice v místních částech vedené bez přiřazení. Není to samostatný součet pro centrum. Sdílené investice mezi obyvatele nerozdělujeme.</p>
+        <button type="button" id="investment-show-unassigned">Na co jsou investice bez přiřazení?</button>
+      </aside>
+    </section>
+    <section class="budget-panel" aria-labelledby="investment-categories-title">
+      <div class="budget-panel-head">
+        <div><p class="budget-eyebrow">Účel investic</p><h2 id="investment-categories-title">Na co jdou investice?</h2></div>
+        <label>Zobrazené místo<select id="investment-place"></select></label>
+      </div>
+      <p id="investment-category-scope" class="budget-context" aria-live="polite"></p>
+      <div id="investment-categories" class="investment-bars"></div>
+      <details id="investment-more-categories" class="budget-calculation"><summary>Všechny oblasti investic</summary><div id="investment-all-categories" class="investment-bars"></div></details>
+    </section>
+    <section id="investment-detail" class="budget-panel" aria-labelledby="investment-detail-title" hidden>
+      <p class="budget-eyebrow">Přímo přiřazené investice</p><h2 id="investment-detail-title" tabindex="-1"></h2>
+      <p id="investment-detail-total" class="investment-detail-total"></p>
+      <h3>Největší investiční položky</h3>
+      <p class="budget-help">Položky podle účetního členění a popisů v podkladech; nemusí odpovídat samostatným projektům.</p>
+      <ol id="investment-allocations" class="investment-allocations"></ol>
+      <details class="budget-calculation"><summary>Jak se plán během roku měnil?</summary>
+        <p id="investment-opening"></p>
+        <ol id="investment-timeline" class="investment-timeline"></ol>
+        <p id="investment-result"></p>
+      </details>
+    </section>
+    <details class="budget-method"><summary>Jak částky počítáme a odkud pocházejí?</summary>
+      <p>Výchozí investiční plán upravujeme o schválené změny, včetně snížení. Zahrnujeme investiční výdaje a investiční příspěvky; převody mezi vlastními účty a fondy se do investic nepřičítají.</p>
+      <p>Místní části přiřazujeme pouze podle ověřeného účetního kódu. Nulová přímo přiřazená částka neznamená, že zde město neinvestuje. Investice bez přiřazení zůstávají v samostatné skupině.</p>
+      <p>Zobrazené částky zaokrouhlujeme na celé koruny. Výpočty provádíme v haléřích.</p>
+      <p id="investment-sources"></p>
+      <p><a href="{{ '/rozpocet/podklady/' | relative_url }}">Podklady, celý rozpočet a výpočty →</a></p>
+    </details>
+  </div>
+</div>
+<script src="{{ '/rozpocet/model.js' | relative_url }}"></script>
+<script src="{{ '/rozpocet/investments-model.js' | relative_url }}"></script>
+<script src="{{ '/rozpocet/investments.js' | relative_url }}"></script>

@@ -1,0 +1,110 @@
+---
+layout: default
+title: Rozpočet Litovle – podklady a výpočty
+description: "Grafy schválených rozpočtových změn města Litovel v roce 2026. Původní podklady, částky a data schválení na jednom místě."
+---
+<link rel="stylesheet" href="{{ '/rozpocet/style.css' | relative_url }}">
+<div class="budget-app" data-budget-url="{{ '/assets/rozpocet/2026.json' | relative_url }}" data-approved-url="{{ '/assets/rozpocet/2026-approved.json' | relative_url }}">
+  <header class="budget-hero">
+    <a href="{{ '/rozpocet/' | relative_url }}">← Investice v Litovli a místních částech</a>
+    <p class="budget-eyebrow">Veřejné finance · 2026</p>
+    <h1>Rozpočet:<br>podklady a výpočty</h1>
+    <p class="budget-lead">Prohlédněte si, kolik město plánuje přijmout a vydat. Najdete zde výchozí rozpočet i změny schválené během roku radou nebo zastupitelstvem.</p>
+    <p class="budget-context"><strong>Rozpočet je roční finanční plán.</strong> Zastupitelstvo schválí výchozí rozpočet a rada nebo zastupitelstvo jej během roku upravují rozpočtovými opatřeními. Zde najdete tento plán a jeho změny. Skutečné čerpání peněz zde nesledujeme.</p>
+    <a href="{{ '/rozpoctova-opatreni/' | relative_url }}">Procházet původní rozpočtová opatření →</a>
+  </header>
+  <p id="budget-status" role="status">Načítání rozpočtových změn…</p>
+  <noscript><p>Interaktivní grafy potřebují JavaScript. <a href="{{ '/rozpoctova-opatreni/' | relative_url }}">Všechna rozpočtová opatření můžete číst zde.</a></p></noscript>
+  <div id="budget-content" hidden>
+    <section class="budget-panel budget-whole" aria-labelledby="budget-whole-title">
+      <div class="budget-panel-head"><div><p class="budget-eyebrow">Celé město a městské fondy</p><h2 id="budget-whole-title">Celý rozpočet na rok 2026</h2></div></div>
+      <p id="budget-whole-source" class="budget-help"></p>
+      <p id="budget-whole-status" role="status">Načítání schváleného rozpočtu…</p>
+      <div id="budget-whole-content" hidden>
+        <div class="budget-table-scroll" role="region" aria-label="Celý rozpočet města" tabindex="0">
+          <table class="budget-table budget-overview-table"><caption>Roční rozpočet v Kč. Přehled vždy zahrnuje celé město a fondy; měsíc lze změnit pod přehledem.</caption><thead><tr><th scope="col">Rozpočet</th><th scope="col">Původně schváleno</th><th scope="col" id="budget-whole-date"></th></tr></thead><tbody>
+            <tr><th scope="row">Plánované příjmy</th><td id="budget-original-income"></td><td id="budget-current-income"></td></tr>
+            <tr><th scope="row">Plánované výdaje</th><td id="budget-original-expenditure"></td><td id="budget-current-expenditure"></td></tr>
+            <tr><th scope="row">Krytí rozdílu financováním</th><td id="budget-original-financing"></td><td id="budget-current-financing"></td></tr>
+          </tbody></table>
+        </div>
+        <p class="budget-help">Výdaje pokrývají příjmy, čerpání úvěrů a peněz z městských účtů. Financování je část, kterou je potřeba pokrýt nad rámec příjmů. Částky odpovídají členění oficiálního rozpočtu, včetně převodů mezi vlastními účty a fondy.</p>
+        <p id="budget-whole-calculation" class="budget-help"></p>
+        <p class="budget-help">Dopočtené celkové částky zatím nejsou nezávisle porovnány s oficiálním souhrnem upraveného rozpočtu ke stejnému datu. Jde o náš výpočet ze zveřejněných podkladů.</p>
+        <details class="budget-calculation">
+          <summary>Na co byly výdaje původně rozpočtovány?</summary>
+          <p>Schválený výchozí rozpočet podle oblastí činnosti. V těchto částkách jsou společně běžné i investiční výdaje.</p>
+          <div class="budget-table-scroll" role="region" aria-label="Původně schválené výdaje podle oblastí" tabindex="0">
+            <table class="budget-table budget-sector-table"><caption>Hlavní rozpočtový okruh podle strany 3 schváleného rozpočtu; fondy podle stran 1 a 4.</caption><thead><tr><th scope="col">Oblast</th><th scope="col">Původně schválené výdaje</th></tr></thead><tbody id="budget-sectors"></tbody><tfoot id="budget-sector-totals"></tfoot></table>
+          </div>
+        </details>
+      </div>
+      <p class="budget-help"><a href="https://www.litovel.eu/filemanager/files/4893150.pdf">Oficiální schválený rozpočet (PDF)</a> · <a href="{{ '/assets/rozpocet/2026-approved.pdf' | relative_url }}">Uložená kopie PDF</a> · <a href="{{ '/usneseni/2025/ZM-6-23-2025/' | relative_url }}">Schvalující usnesení</a></p>
+    </section>
+    <section class="budget-controls" aria-label="Nastavení grafů">
+      <label>Zobrazené výdaje<select id="budget-mode"><option value="capital">Investiční výdaje</option><option value="all">Všechny výdaje</option></select></label>
+      <label>Přiřazení místní části<select id="budget-place" aria-describedby="budget-scope"></select></label>
+      <label>Změny do měsíce<select id="budget-month"></select></label>
+      <p id="budget-cutoff"></p>
+    </section>
+    <p id="budget-scope" class="budget-context" aria-live="polite"></p>
+    <section class="budget-metrics" aria-labelledby="budget-net-label">
+      <p id="budget-net-label"></p>
+      <strong id="budget-net"></strong>
+      <p class="budget-result-help">Výchozí plán stanovilo zastupitelstvo ve schváleném ročním rozpočtu. Zde sčítáme jeho úpravy schválené během roku pro vybraný druh výdajů a místo. Jde o změnu rozpočtované částky, nikoli o utracené peníze.</p>
+      <p class="budget-help">Souhrnný roční rozpočet výše nerozlišuje investice podle místních částí. Jejich výchozí částku proto nedoplňujeme odhadem; filtrované grafy zobrazují pouze změny.</p>
+      <details class="budget-calculation">
+        <summary>Jak vznikla tato částka?</summary>
+        <dl>
+          <div><dt>Přidané částky do výdajových řádků</dt><dd id="budget-increase"></dd></div>
+          <div><dt>Odebrané částky z výdajových řádků</dt><dd id="budget-reduction"></dd></div>
+          <div><dt>Rozdíl po odečtení</dt><dd id="budget-difference"></dd></div>
+        </dl>
+        <p>Při přesunu peněz se částka na jednom řádku odebere a na jiném přidá. Obě částky pak mohou být vysoké, i když se celkový plán téměř nezmění. Odebraná částka proto sama o sobě neznamená zrušenou investici.</p>
+        <p>Například přesun 20 milionů Kč z jednoho řádku do dvou nových řádků po 9,8 a 10,2 milionu Kč celkový plán nezvýší ani nesníží.</p>
+      </details>
+    </section>
+    <section class="budget-panel" aria-labelledby="budget-line-title">
+      <div class="budget-panel-head"><div><p class="budget-eyebrow">Vývoj v čase</p><h2 id="budget-line-title">Kumulativní změna rozpočtu</h2></div><span class="budget-legend"><i></i><span id="budget-mode-label">Investiční výdaje</span></span></div>
+      <p class="budget-help">Každý bod představuje den schválení. Vyberte bod a prohlédněte si jeho rozpočtové změny.</p>
+      <div id="budget-line" class="budget-chart"></div>
+      <p class="budget-footnote">Počáteční nula znamená začátek sledování změn, nikoli nulový rozpočet. Přesun peněz může mít v součtu nulový dopad.</p>
+    </section>
+    <section class="budget-panel" aria-labelledby="budget-bars-title">
+      <div class="budget-panel-head"><div><p class="budget-eyebrow">Měsíc po měsíci</p><h2 id="budget-bars-title">Kdy se výdaje změnily</h2></div></div>
+      <p class="budget-help">Čistá změna v jednotlivých měsících. Vyberte měsíc pro zobrazení jeho podkladů.</p>
+      <div id="budget-bars" class="budget-chart"></div>
+    </section>
+    <section class="budget-panel" aria-labelledby="budget-entries-title">
+      <div class="budget-panel-head"><div><p class="budget-eyebrow">Dohledatelné podklady</p><h2 id="budget-entries-title">Schválené rozpočtové změny</h2></div><button id="budget-csv" type="button">Stáhnout CSV</button></div>
+      <label class="budget-search" for="budget-query">Hledat v podkladech<input id="budget-query" type="search" placeholder="Např. chodník, Savín nebo 75/2026/ZM"></label>
+      <p class="budget-help">Hledání filtruje tabulku. Grafy dál ukazují všechny změny zvolené kategorie.</p>
+      <div class="budget-filter"><p id="budget-results" role="status"></p><button id="budget-clear-selection" type="button" hidden>Zobrazit celé období</button></div>
+      <p id="budget-selection" class="budget-selection" tabindex="-1" hidden></p>
+      <div class="budget-table-scroll" role="region" aria-label="Tabulka rozpočtových změn" tabindex="0">
+        <table class="budget-table"><caption class="budget-sr-only">Částky schválených změn v Kč. Řádek lze rozbalit tlačítkem Podrobnosti.</caption><thead><tr>
+          <th scope="col" aria-sort="descending"><button type="button" data-sort="date">Datum ↕</button></th>
+          <th scope="col" aria-sort="none"><button type="button" data-sort="id">Rozpočtová změna ↕</button></th>
+          <th scope="col" aria-sort="none"><button type="button" data-sort="increase">Navýšení ↕</button></th>
+          <th scope="col" aria-sort="none"><button type="button" data-sort="reduction">Snížení ↕</button></th>
+          <th scope="col" aria-sort="none"><button type="button" data-sort="net">Čistá změna ↕</button></th>
+        </tr></thead><tbody id="budget-rows"></tbody></table>
+      </div>
+    </section>
+    <section class="budget-method" aria-labelledby="budget-method-title">
+      <h2 id="budget-method-title">Co přesně grafy ukazují</h2>
+      <p>Celkový přehled vychází ze schváleného rozpočtu na rok 2026, který zastupitelstvo schválilo 11. prosince 2025 usnesením ZM/6/23/2025. Sloupec po změnách dopočítáváme ze všech zahrnutých opatření k vybranému datu, včetně případných opatření schválených před lednem. U každého opatření ověřujeme, že příjmy a financování společně pokrývají výdaje. Tento sloupec se nezobrazuje, pokud nelze ověřit úplnost účetních řádků nebo jejich součty.</p>
+      <p>Sčítáme pouze změny výdajů pro rozpočtový rok 2026 schválené od 1. ledna do zvoleného měsíce. Investiční výdaje jsou účetní položky třídy 6, včetně investičních příspěvků. Volba Všechny výdaje přidává běžné výdaje třídy 5.</p>
+      <p>Příjmy, financování a vnitřní převody mezi vlastními účty a fondy města se do grafů změn výdajů nepřičítají. Celkový rozpočet v horním přehledu tyto převody zahrnuje podle oficiálního dokumentu. Navýšení a snížení počítáme z jednotlivých účetních řádků; čistá změna je jejich součet. Nejde o součet cen projektů.</p>
+      <p>Změny přiřazujeme k datu schválení. Z původních dokumentů přebíráme identifikátory a texty; projekty ani místa automaticky neodvozujeme. Částky se počítají v haléřích.</p>
+      <p>Filtr místní části vybírá pouze účetní řádky přímo přiřazené kódem ORJ 301–311. Názvy odpovídají <a href="https://www.litovel.eu/filemanager/files/5076572.pdf#page=48">tabulce 14 v závěrečném účtu města za rok 2025</a>. U změn zahrnujících více místních částí započítáme jen řádky zvoleného místa.</p>
+      <p>Investice bez přiřazení místní části mohou zahrnovat centrální Litovel, společnou infrastrukturu i investice v místních částech vedené bez tohoto kódu. Zvolená místní část proto ukazuje přímo přiřazené změny, nikoli všechny investice, ze kterých má prospěch.</p>
+      <p id="budget-coverage"></p><p id="budget-exclusions"></p>
+      <p><a href="{{ '/assets/rozpocet/2026.json' | relative_url }}">Stáhnout použitá data (JSON)</a> · <a href="{{ '/assets/rozpocet/2026-review.json' | relative_url }}">Kontrolní přehled účetních řádků</a></p>
+      <p><a href="https://www.litovel.eu/cs/mesto/finance-a-investice/rozpocet-mesta/rozpocet-mesta-rok-2026.html">Oficiální rozpočtové dokumenty města pro rok 2026</a></p>
+      <details id="budget-earlier"><summary>Změny schválené před začátkem roku</summary><p>Tato opatření se týkají rozpočtu 2026, ale byla schválena dříve. Grafy sledují změny schválené od 1. ledna, a proto je nezahrnují.</p><ul id="budget-earlier-list"></ul></details>
+    </section>
+  </div>
+</div>
+<script defer src="{{ '/rozpocet/model.js' | relative_url }}"></script>
+<script defer src="{{ '/rozpocet/app.js' | relative_url }}"></script>

@@ -42,6 +42,12 @@ description: "Nezávislá občanská iniciativa propojující město, lidi a tec
 </div>
 
 <div class="item-card landing-card">
+    <h2>Investice a rozpočet Litovle</h2>
+    <p>Schválený rozpočet a jeho změny na jednom místě. Srovnání investic do místních částí připravujeme po získání úplných podkladů.</p>
+    <a href="{{ '/rozpocet/' | relative_url }}" class="button">Prohlédnout investice a rozpočet</a>
+</div>
+
+<div class="item-card landing-card">
     <h2>Facebook Litovle.cz</h2>
     <p>Nové odkazy a upozornění na aktuální věci kolem Litovle.cz.</p>
     <a href="https://www.facebook.com/litovle/" class="button">
