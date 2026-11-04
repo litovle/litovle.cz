@@ -38,6 +38,7 @@ function app(category = "", query = "", fixtureRecords = null) {
   };
   const context = vm.createContext({
     UsneseniOutcomes: require("../usneseni/outcomes.js"),
+    UsneseniSearchPreview: require("../usneseni/search-preview.js"),
     document: {createDocumentFragment: () => ({appendChild: () => {}}), getElementById: node, querySelector: selector => selector === ".usn-search-panel" ? panel : null, createElement: () => ({dataset: {}, setAttribute: function(name, value) {this[name] = value;}})},
     location: {pathname: "/usneseni/", search: "", hash: ""},
     history: {replaceState: (_, __, url) => {context.location.search = url;}},
@@ -54,7 +55,7 @@ function app(category = "", query = "", fixtureRecords = null) {
     YEAR_INPUTS = [{value: "2026", checked: true}];
     TYPE_INPUTS = [{value: "usneseni", checked: true}, {value: "ro", checked: true}];
     ORG_INPUTS = [{value: "Rada města Litovel", checked: true}, {value: "Zastupitelstvo města Litovel", checked: true}];
-    globalThis.api = {loadYear, setFiltersOpen, bindUiEvents, truncatePreview, renderResolutionPreview, search, searchWithOpenFilters,
+    globalThis.api = {loadYear, setFiltersOpen, bindUiEvents, truncatePreview, cleanRoSnippet, buildSearchText, renderResolutionPreview, search, searchWithOpenFilters,
       sources: (resolutions, budgets, archive) => {META = resolutions; RO_META = budgets; ARCHIVE_META = archive;},
       findResults, parseQuery, updateUrl, loadFromUrl, filtersAreDefault, selectedOutcome, browseOutcome,
       paginate, renderResultCard, selectedTopic, loadMeta, renderWelcomeOverview, filterSummary, updateSearchPresentation,
@@ -302,6 +303,27 @@ test("preview truncation marks shortened text and leaves short text intact", () 
   assert.ok(card.innerHTML.includes("…"));
 });
 
+test("RO/17/2026 preview removes the imported unclosed RZ suffix and keeps its link", () => {
+  const {api} = app();
+  const records = JSON.parse(fs.readFileSync(path.join(__dirname, "../assets/usneseni/ro/data/2026.json"), "utf8"));
+  const record = records.find(record => record.id === "RO/17/2026");
+  const html = api.renderResultCard(record, api.parseQuery("Unčovice")).innerHTML;
+  assert.match(html, /<strong>176\/2026\/RM<\/strong>/);
+  assert.match(html, /#rz-176-2026-rm/);
+  assert.match(html, /<mark>Unčovice<\/mark> - renovace vnitřních prostor<\/span>/);
+  assert.doesNotMatch(html, /\(RZ/);
+});
+
+test("RO preview cleanup preserves descriptive parentheses and embedded references", () => {
+  const {api} = app();
+  for (const suffix of [" (RZ 176/2026/RM", " (RZ 176/2026/RM)", " (RZ176 / 2026 / ZM )  "]) {
+    assert.equal(api.cleanRoSnippet("Renovace (první etapa)" + suffix), "Renovace (první etapa)");
+  }
+  for (const text of ["Renovace (první etapa)", "Renovace (RZ 176/2026/RM) a oprava střechy", "Renovace (RZ 176/2026/"]) {
+    assert.equal(api.cleanRoSnippet(text), text);
+  }
+});
+
 
 test("opening filters reveals selected older years without changing the selection", () => {
   const {api, node} = app();
@@ -359,6 +381,81 @@ test("item previews escape once and highlight accented text without changing lab
   assert.equal(api.truncatePreview("  Krátký  text\nbez ořezu. "), "Krátký text bez ořezu.");
 });
 
+test("search previews select late matching points and keep their original indices", () => {
+  const {api, context} = app("property", "lékař");
+  context.location.search = "?q=l%C3%A9ka%C5%99&category=property&y=2026";
+  const record = {id: "RM/1/1/2026", items: Array.from({length: 7}, (_, index) => ({
+    label: "a", text: index === 6 ? "Úvodní text. ".repeat(30) + "Pronájem ordinace pro lékaře v Litovli." : "schvaluje program",
+  }))};
+  const html = api.renderResultCard(record, api.parseQuery("lékař")).innerHTML;
+  assert.match(html, /<mark>lékař<\/mark>e/);
+  assert.match(html, /… /);
+  assert.match(html, /#bod-7/);
+  assert.doesNotMatch(html, /#bod-1/);
+  assert.doesNotMatch(html, /schvaluje program/);
+  const href = html.match(/href="([^"]+)"/)[1].replaceAll("&amp;", "&");
+  const url = new URL(href, "https://litovle.cz");
+  assert.equal(url.hash, "#bod-7");
+  assert.equal(url.searchParams.get("back"), "/usneseni/" + context.location.search);
+});
+
+test("each displayed match has its own point link and only matching points count as remaining", () => {
+  const {api} = app();
+  const record = {id: "RM/1/1/2026", items: Array.from({length: 9}, (_, index) => ({
+    label: String(index + 1), text: index % 2 ? "oprava školy" : "program schůze",
+  }))};
+  const html = api.renderResultCard(record, api.parseQuery("školy")).innerHTML;
+  for (const index of [2, 4, 6]) assert.match(html, new RegExp(`class="usn-point-link" href="[^"]+#bod-${index}"`));
+  assert.doesNotMatch(html, /#bod-8/);
+  assert.match(html, /Další 1 rozhodnutí se shodou/);
+  assert.doesNotMatch(html, /program schůze/);
+});
+
+test("generic query words do not hide the point with the complete match", () => {
+  const {api} = app();
+  const record = {id: "RM/1/1/2026", subject: "schvaluje dotace", items: Array.from({length: 7}, (_, index) => ({
+    label: String(index + 1), text: "schvaluje dotace pro " + (index === 6 ? "Senzakord" : "školy"),
+  }))};
+  const html = api.renderResultCard(record, api.parseQuery("schvaluje dotace Senzakord")).innerHTML;
+  assert.match(html, /#bod-7/);
+  assert.match(html, /<mark>Senzakord<\/mark>/);
+  assert.doesNotMatch(html, /#bod-1/);
+  assert.match(html.match(/href="([^"]+)"/)[1], /#bod-7$/);
+});
+
+test("an exact phrase takes precedence over a point containing the words separately", () => {
+  const {api} = app();
+  const record = {id: "RM/1/1/2026", items: [
+    {label: "a", text: "Zahrada školy a oprava chodníku"},
+    {label: "b", text: "oprava školy v Litovli"},
+  ]};
+  const html = api.renderResultCard(record, api.parseQuery("oprava školy")).innerHTML;
+  assert.match(html, /#bod-2/);
+  assert.doesNotMatch(html, /#bod-1/);
+});
+
+test("subject and tail matches have contextual previews and distinct anchors", () => {
+  const {api} = app();
+  for (const [field, anchor] of [["subject", "predmet"], ["tail", "dovetek"]]) {
+    const record = {id: "RM/1/1/2026", [field]: "Dlouhý úvod. ".repeat(30) + "oprava školy v Nasobůrkách"};
+    const html = api.renderResultCard(record, api.parseQuery("Nasobůrkách")).innerHTML;
+    assert.match(html, /<mark>Nasobůrkách<\/mark>/);
+    assert.match(html, new RegExp(`#${anchor}`));
+  }
+  const html = api.renderResultCard({id: "RM/1/1/2026", subject: "oprava chodníku", tail: "oprava školy v Nasobůrkách"}, api.parseQuery("oprava školy")).innerHTML;
+  assert.match(html.match(/href="([^"]+)"/)[1], /#dovetek$/);
+});
+
+test("outcome-only result links directly to the original matching point", () => {
+  const {api, node} = app();
+  node("usn-outcome").value = "rejected";
+  const html = api.renderResultCard({id: "RM/1/1/2026", items: [
+    {label: "a", text: "schvaluje program"}, {label: "b", text: "neschvaluje pronájem zahrady"},
+  ]}, null).innerHTML;
+  assert.match(html, /#bod-2/);
+  assert.doesNotMatch(html, /#bod-1/);
+});
+
 test("outcome URLs survive reload and reject unknown values", () => {
   const {api, node, context} = app("transport", "chodniku");
   node("usn-outcome").value = "rejected";
@@ -385,6 +482,22 @@ const outcomeRecords = [
   {id: "RO/1/2026", organ: "RM", approval_date: "2026-03-01", notes: []},
   {id: "archive-1", organ: "RM", type: "archive_resolution", date: "2026-04-01", display_text: "neschvaluje žádost"},
 ];
+
+test("a parsed mění action remains searchable, highlighted and included in the existing changed filter", async () => {
+  const previous = {id: "RM/2563/81/2026", organ: "RM", datum: "2026-10-01", actions: ["souhlasí"], subject: "s nákupem vybavení"};
+  const changed = {id: "RM/2592/82/2026", organ: "RM", datum: "2026-10-22", actions: ["mění"],
+    subject: "usnesení č. RM/2563/81/2026: částka 1.800.000 Kč se nahrazuje částkou 2.000.000 Kč.",
+    references_out: [{raw: "RM/2563/81/2026", resolved: previous.id}]};
+  const {api, node} = app("", "", [previous, changed]);
+  assert.ok(api.buildSearchText(changed).startsWith("meni usneseni"));
+  node("usn-outcome").value = "changed";
+  assert.deepEqual(ids(await api.findResults(null)), [changed.id]);
+  assert.deepEqual(ids(await api.findResults(api.parseQuery("mění"))), [changed.id]);
+  node("usn-outcome").value = "";
+  const card = api.renderResultCard(changed, api.parseQuery("mění")).innerHTML;
+  assert.match(card, /class="usn-summary"><mark>mění<\/mark>/);
+  assert.match(card, /#predmet/);
+});
 
 test("outcome-only browsing respects topic and document filters, and excludes missing data", async () => {
   const {api, node} = app("", "", outcomeRecords);

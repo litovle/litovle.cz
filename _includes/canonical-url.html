@@ -1,0 +1,7 @@
+{%- assign canonical_origin = site.data.seo.origin | default: site.url -%}
+{%- assign canonical_path = include.url | default: page.url -%}
+{%- if canonical_path contains '://' -%}
+  {{- canonical_path -}}
+{%- else -%}
+  {{- canonical_path | relative_url | prepend: canonical_origin -}}
+{%- endif -%}

@@ -2,7 +2,7 @@
 ((root) => {
   const rules = {
     rejected: {label: "Zamítnuto", actions: ["neschvaluje", "nesouhlasí"], note: "Body s akcí „neschvaluje“ nebo „nesouhlasí“."},
-    changed: {label: "Změněno", actions: ["revokuje"], note: "Revokace starších usnesení. Samotná revokace neříká, proč se rozhodnutí změnilo."},
+    changed: {label: "Změněno", actions: ["revokuje", "mění"], note: "Body s akcí „revokuje“ nebo „mění“. Rozsah změny je uveden v textu usnesení."},
     deferred: {label: "Odloženo", actions: ["odkládá", "stahuje bod"], note: "Body s akcí „odkládá“ nebo „stahuje bod“."},
   };
   const normalize = text => String(text || "").toLowerCase().normalize("NFD")

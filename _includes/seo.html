@@ -1,0 +1,95 @@
+{%- assign seo_title = page.seo_title | default: page.title | default: site.title -%}
+{%- assign seo_description = page.description | default: site.description | normalize_whitespace -%}
+{%- assign seo_url = page.canonical_url | default: page.url -%}
+{%- capture seo_canonical -%}{%- include canonical-url.html url=seo_url -%}{%- endcapture -%}
+{%- capture seo_home -%}{%- include canonical-url.html url='/' -%}{%- endcapture -%}
+{%- assign seo_organization = seo_home | append: '#organization' -%}
+{%- assign seo_website = seo_home | append: '#website' -%}
+{%- assign seo_webpage = seo_canonical | append: '#webpage' -%}
+{%- assign seo_document = seo_canonical | append: '#document' -%}
+{%- capture seo_full_title -%}
+  {{- seo_title -}}{%- unless seo_title == site.title %} – {{ site.title }}{% endunless -%}
+{%- endcapture -%}
+<title>{{ seo_full_title | escape_once }}</title>
+<meta name="description" content="{{ seo_description | escape_once }}">
+<link rel="canonical" href="{{ seo_canonical | escape }}">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="cs_CZ">
+<meta property="og:site_name" content="{{ site.title | escape }}">
+<meta property="og:title" content="{{ seo_full_title | escape_once }}">
+<meta property="og:description" content="{{ seo_description | escape_once }}">
+<meta property="og:url" content="{{ seo_canonical | escape }}">
+<meta name="twitter:card" content="summary">
+
+{%- capture seo_graph -%}
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": {{ seo_organization | jsonify }},
+      "name": {{ site.title | jsonify }},
+      "url": {{ seo_home | jsonify }},
+      "description": "Nezávislý občanský web s praktickými informacemi a nástroji pro Litovel.",
+      "sameAs": ["https://www.facebook.com/litovle/", "https://github.com/litovle/litovle.cz"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": {{ seo_website | jsonify }},
+      "name": {{ site.title | jsonify }},
+      "url": {{ seo_home | jsonify }},
+      "description": {{ site.description | jsonify }},
+      "publisher": { "@id": {{ seo_organization | jsonify }} },
+      "inLanguage": "cs",
+      "hasPart": [
+        {
+          "@type": "WebSite",
+          "name": "Svoz odpadu Litovel",
+          "url": "https://svoz.litovle.cz/",
+          "description": "Kalendář svozu odpadu pro Litovel podle ulic."
+        },
+        {
+          "@type": "SoftwareApplication",
+          "name": "Svoz odpadu Litovel",
+          "operatingSystem": "Android",
+          "applicationCategory": "UtilitiesApplication",
+          "url": "https://play.google.com/store/apps/details?id=cz.litovle.svoz"
+        }
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": {{ seo_webpage | jsonify }},
+      "url": {{ seo_canonical | jsonify }},
+      "name": {{ seo_title | jsonify }},
+      "description": {{ seo_description | jsonify }},
+      "inLanguage": "cs",
+      "isPartOf": { "@id": {{ seo_website | jsonify }} },
+      "publisher": { "@id": {{ seo_organization | jsonify }} }
+      {%- if page.layout == 'usneseni' -%},
+      "mainEntity": { "@id": {{ seo_document | jsonify }} }
+      {%- endif %}
+    }
+    {%- if page.layout == 'usneseni' -%},
+    {
+      "@type": {% if page.rozpoctove_opatreni %}"DigitalDocument"{% else %}"Legislation"{% endif %},
+      "@id": {{ seo_document | jsonify }},
+      "name": {{ page.title | jsonify }},
+      "identifier": {{ page.cislo | jsonify }},
+      "description": {{ seo_description | jsonify }},
+      "url": {{ seo_canonical | jsonify }},
+      "inLanguage": "cs",
+      "mainEntityOfPage": { "@id": {{ seo_webpage | jsonify }} }
+      {%- unless page.rozpoctove_opatreni -%},
+      "legislationType": "Usnesení",
+      "legislationIdentifier": {{ page.cislo | jsonify }},
+      "legislationDate": {{ page.datum | jsonify }},
+      "legislationPassedBy": { "@type": "GovernmentOrganization", "name": {{ page.organ | jsonify }} }
+      {%- endunless %}
+    }
+    {%- endif %}
+  ]
+}
+{%- endcapture %}
+<script type="application/ld+json">{{ seo_graph | replace: '<', '\u003c' }}</script>
+{% include seo-breadcrumbs.html %}

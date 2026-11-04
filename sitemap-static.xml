@@ -1,21 +1,24 @@
+---
+layout: null
+---
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{%- assign static_pages = site.html_pages | sort: 'url' -%}
+{%- for entry in static_pages -%}
+  {%- if entry.layout == nil or entry.layout == 'none' -%}{%- continue -%}{%- endif -%}
+  {%- if entry.url contains '/usneseni/' and entry.url != '/usneseni/' -%}{%- continue -%}{%- endif -%}
+  {%- if entry.url contains '/rozpoctova-opatreni/' or entry.url contains '/uzemni-plan/pripominky/' or entry.redirect_to -%}{%- continue -%}{%- endif %}
+  {%- assign entry_url = entry.canonical_url | default: entry.url -%}
+  {%- capture entry_canonical -%}{%- include canonical-url.html url=entry_url -%}{%- endcapture %}
   <url>
-    <loc>https://litovle.cz/</loc>
+    <loc>{{ entry_canonical | xml_escape }}</loc>
   </url>
+{%- endfor -%}
+{%- for entry in site.posts %}
+  {%- assign entry_url = entry.canonical_url | default: entry.url -%}
+  {%- capture entry_canonical -%}{%- include canonical-url.html url=entry_url -%}{%- endcapture %}
   <url>
-    <loc>https://litovle.cz/o-projektu/</loc>
+    <loc>{{ entry_canonical | xml_escape }}</loc>
   </url>
-  <url>
-    <loc>https://litovle.cz/aplikace/</loc>
-  </url>
-  <url>
-    <loc>https://litovle.cz/zastupitelstvo/</loc>
-  </url>
-  <url>
-    <loc>https://litovle.cz/usneseni/</loc>
-  </url>
-  <url>
-    <loc>https://litovle.cz/uzemni-plan/</loc>
-  </url>
+{%- endfor %}
 </urlset>
