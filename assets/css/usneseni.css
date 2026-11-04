@@ -57,6 +57,12 @@
 :is(.usn-app, .usn-section) .usn-card:hover { background: #f6f2e9; }
 :is(.usn-app, .usn-section) .usn-card:hover .usn-snippet { text-decoration: none; }
 :is(.usn-app, .usn-section) .usn-card:hover .usn-head strong { text-decoration: underline; }
+.usn-app .usn-card-points:hover { background: transparent; }
+.usn-app .usn-card-points:hover .usn-head strong { text-decoration: none; }
+.usn-app :is(.usn-card-heading, .usn-point-link) { display: block; color: inherit; text-decoration: none; border-radius: 3px; }
+.usn-app :is(.usn-card-heading, .usn-point-link):hover { background: #f6f2e9; }
+.usn-app .usn-card-heading:hover .usn-head strong,
+.usn-app .usn-point-link:hover .usn-action-label { text-decoration: underline; }
 :is(.usn-app, .usn-section) .usn-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .7rem; }
 :is(.usn-app, .usn-section) .usn-head strong { color: var(--brand-blue); font-size: var(--text-body); }
 :is(.usn-app, .usn-section) :is(.usn-date, .usn-summary) { font-size: var(--text-small); color: var(--text-muted); font-style: normal; }
@@ -157,20 +163,63 @@
 
 /* Ordinary resolutions and RO headers share one simple reading surface. */
 .usn-resolution { line-height: 1.6; }
+.usn-resolution :is(h1, h2, h3, h4, h5, h6, strong, b) { font-weight: 600; }
 .usn-resolution-back p { margin: 0 0 12px; }
 .usn-resolution .usneseni, .usn-budget .usn-ro-hero { padding: var(--space-panel); background: var(--surface-panel); border: 0; border-radius: var(--radius-panel); }
 .usn-resolution .usneseni-header { margin-bottom: var(--space-section); }
 .usn-resolution .usneseni-meta { display: flex; flex-wrap: wrap; gap: 4px 24px; font-size: var(--text-small); color: var(--text-muted); }
 .usn-resolution .usneseni-body { overflow-wrap: anywhere; }
+.usn-resolution .usneseni-body :is([id], mark) { scroll-margin-block: 96px; }
+.usn-resolution .usneseni-body mark { background: #dce9f7; color: inherit; padding: 0; border-radius: 2px; }
+.usn-resolution .is-search-target { animation: usn-match-arrival 4s ease-out; }
+@keyframes usn-match-arrival {
+  from { background-color: #eef4fb; }
+  to { background-color: transparent; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .usn-resolution .is-search-target { animation: none; background: #eef4fb; }
+}
 .usn-resolution .usneseni-body p { margin: 0 0 16px; }
 .usn-resolution .usneseni-body :is(ul, ol) { margin: 0 0 16px; padding-left: 1.5em; }
 .usn-resolution .usneseni-body li + li { margin-top: 8px; }
-.usn-resolution .usneseni-body :is(h2, h3) { font-size: var(--text-section); line-height: 1.3; margin: 24px 0 12px; }
-.usn-resolution .usneseni-body :is(h4, h5, h6) { font-size: var(--text-body); margin: 16px 0 8px; }
+.usn-resolution .usneseni-body :is(h2, h3, h4, h5, h6) { font-size: var(--text-body); line-height: 1.5; margin: 24px 0 12px; }
 .usn-resolution .usneseni-body > :last-child { margin-bottom: 0; }
 .usn-resolution .usneseni-footer { margin-top: var(--space-section); }
+.usn-resolution .usn-sibling-nav { margin-bottom: 16px; }
+.usn-resolution .usn-sibling-links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; }
+.usn-resolution .usn-sibling-link { display: block; width: fit-content; max-width: 100%; padding-block: 4px; text-decoration: none; overflow-wrap: anywhere; }
+.usn-resolution .usn-sibling-link > span { display: block; }
+.usn-resolution .usn-sibling-link > span:first-child { color: var(--text-muted); }
+.usn-resolution .usn-sibling-id { text-decoration: underline; }
+.usn-resolution .usn-sibling-link:hover .usn-sibling-id { text-decoration-thickness: 2px; }
+.usn-resolution .usn-sibling-next { grid-column: 2; justify-self: end; text-align: right; }
+@media (max-width: 500px) {
+  .usn-resolution .usn-sibling-links { grid-template-columns: minmax(0, 1fr); }
+  .usn-resolution .usn-sibling-next { grid-column: 1; justify-self: start; text-align: left; }
+}
 .usn-resolution-meeting p { margin: 0 0 12px; }
 .usn-resolution .usneseni-note { font-size: var(--text-small); color: var(--text-muted); margin: 0; }
+
+/* Documented changes and related decisions stay within the same reading surface. */
+.usn-resolution .usn-revision-notice { margin: 0 0 var(--space-section); padding-left: var(--space-panel); border-left: 3px solid var(--brand-blue); }
+.usn-resolution .usneseni-body .usn-revision-notice h2 { margin: 0 0 8px; }
+.usn-resolution .usneseni-body .usn-revision-notice ul { list-style: none; margin: 0; padding: 0; }
+.usn-resolution .usneseni-body .usn-revision-notice li + li { margin-top: 16px; }
+.usn-resolution .usn-context-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.usn-resolution .usn-context-meta, .usn-resolution .usn-context-meta time,
+.usn-resolution .usn-decision-history time { font-size: var(--text-small); color: var(--text-muted); }
+.usn-resolution .usneseni-body .usn-context-note { font-size: var(--text-small); color: var(--text-muted); margin: 0 0 16px; }
+.usn-resolution .usneseni-body .usn-revision-quote { margin: 4px 0 8px; }
+.usn-resolution .usn-revision-notice li > .usn-context-link { font-size: var(--text-small); }
+.usn-resolution .usn-decision-history { margin-top: var(--space-section); }
+.usn-resolution .usneseni-body .usn-decision-history > h2 { margin: 0 0 12px; }
+.usn-resolution .usneseni-body .usn-decision-history .usn-results { margin: 0; padding: 0; }
+.usn-resolution .usneseni-body .usn-decision-history .usn-results > li { margin: 0; }
+.usn-resolution .usneseni-body .usn-decision-history .usn-action-preview { margin: 8px 0 0; padding: 0; }
+.usn-resolution .usneseni-body .usn-history-relation { font-size: var(--text-small); color: var(--text-muted); margin: 4px 0; }
+.usn-resolution .usn-history-current .usn-head strong { color: var(--primary-text-color); }
+.usn-resolution .usn-history-current .usn-history-relation { color: var(--brand-blue); font-weight: 600; }
+.usn-resolution .usneseni-body .usn-history-unavailable { list-style: none; padding: 0; margin: 16px 0 0; font-size: var(--text-small); color: var(--text-muted); }
 
 /* Accounting content retains its structure and anchors, with shared spacing and type. */
 .usn-budget .usn-ro-hero { margin: 0 0 var(--space-section); }

@@ -1,6 +1,8 @@
 ---
 layout: default
 title: Usnesení rady a zastupitelstva města – vyhledávání
+seo_title: Usnesení rady a zastupitelstva Litovel – vyhledávání
+description: "Vyhledávejte v usneseních rady a zastupitelstva města Litovel podle tématu, místa, roku nebo čísla. Prohlédněte si jednotlivé schůze a navazující rozhodnutí."
 permalink: /usneseni/
 ---
 
@@ -312,4 +314,5 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
 </div>
 
 <script src="/usneseni/outcomes.js"></script>
+<script src="/usneseni/search-preview.js"></script>
 <script src="/usneseni/app.js"></script>

@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /usneseni/?
+Disallow: /usneseni?
+
+Sitemap: https://litovle.cz/sitemap.xml

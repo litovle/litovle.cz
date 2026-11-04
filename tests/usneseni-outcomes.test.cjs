@@ -9,7 +9,7 @@ const record = overrides => ({id: "RM/1/1/2026", actions: [], items: [], ...over
 test("only explicit outcome actions classify a resolution", () => {
   assert.equal(outcomes.definition("__proto__"), null);
   assert.equal(outcomes.definition("unknown"), null);
-  for (const [key, actions] of Object.entries({rejected: ["neschvaluje", "nesouhlasí"], changed: ["revokuje"], deferred: ["odkládá", "stahuje bod"]})) {
+  for (const [key, actions] of Object.entries({rejected: ["neschvaluje", "nesouhlasí"], changed: ["revokuje", "mění"], deferred: ["odkládá", "stahuje bod"]})) {
     for (const action of actions) assert.equal(outcomes.parts(record({actions: [action], subject: "žádost"}), key).length, 1);
   }
   for (const action of ["schvaluje", "souhlasí", "bere na vědomí"]) {
@@ -17,6 +17,16 @@ test("only explicit outcome actions classify a resolution", () => {
   }
   assert.equal(outcomes.parts(record({items: [{text: "schvaluje změnu smlouvy, kterou dříve revokuje"}]}), "changed").length, 0);
   assert.equal(outcomes.parts(record({items: [{text: "neschvalujeme"}]}), "rejected").length, 0);
+});
+
+test("mění belongs to changed with its original reference and excludes negated or unrelated actions", () => {
+  const changed = record({actions: ["mění"], subject: "usnesení RM/2563/81/2026 zvýšením částky.",
+    references_out: [{raw: "RM/2563/81/2026", resolved: "RM/2563/81/2026"}]});
+  assert.equal(outcomes.parts(changed, "changed").length, 1);
+  assert.deepEqual(outcomes.references(changed, "changed"), ["RM/2563/81/2026"]);
+  const mixed = record({items: [{label: "a", text: "souhlasí s nákupem"}, {label: "b", text: "Mění usnesení RM/2563/81/2026."}]});
+  assert.deepEqual(outcomes.parts(mixed, "changed").map(part => part.index), [1]);
+  for (const action of ["nemění", "ruší", "schvaluje"]) assert.deepEqual(outcomes.parts(record({actions: [action], subject: "změnu smlouvy"}), "changed"), []);
 });
 
 test("mixed resolutions retain the exact matching item and its original label", () => {

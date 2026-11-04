@@ -8,6 +8,7 @@
   const SEARCH_DEBOUNCE_MS = 140;
   const DEFAULT_SEARCH_YEARS = 5;
   const outcomes = globalThis.UsneseniOutcomes;
+  const previews = globalThis.UsneseniSearchPreview;
   const FEATURED_TOPICS = [
     ["education", "Školy a školky"],
     ["transport", "Doprava a chodníky"],
@@ -115,12 +116,12 @@
     return u.type === "archive_document" || u.type === "archive_resolution";
   }
 
-  function hrefFromRecord(u) {
+  function hrefFromRecord(u, anchor = "") {
     if (isArchiveRecord(u)) {
       return u.permalink || u.source_url || u.original_file_url || "#";
     }
 
-    return `${staticUrlFromId(u.id)}?back=${encodeURIComponent(location.pathname + location.search)}`;
+    return `${staticUrlFromId(u.id)}?back=${encodeURIComponent(location.pathname + location.search)}${anchor ? `#${encodeURIComponent(anchor)}` : ""}`;
   }
 
   function idFromHash() {
@@ -192,6 +193,7 @@
 
     return normalize(
       [
+        ...(u.actions || []),
         u.subject || "",
         ...(u.items || []).map(i => i.text),
         u.tail || ""
@@ -216,28 +218,7 @@
   }
 
   function highlight(text, terms) {
-    const escaped = String(text || "");
-    if (!terms?.length) return escapeHtml(escaped);
-    const folded = value => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("cs");
-    const norm = folded(escaped);
-    const spans = [];
-    for (const term of terms) {
-      const needle = folded(term);
-      if (needle.length < 3) continue;
-      let from = 0;
-      while ((from = norm.indexOf(needle, from)) !== -1) {
-        spans.push([from, from + needle.length]);
-        from += needle.length;
-      }
-    }
-    spans.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
-    let out = "", cursor = 0;
-    for (const [start, end] of spans) {
-      if (start < cursor) continue;
-      out += escapeHtml(escaped.slice(cursor, start)) + `<mark>${escapeHtml(escaped.slice(start, end))}</mark>`;
-      cursor = end;
-    }
-    return out + escapeHtml(escaped.slice(cursor));
+    return previews.highlight(text, terms);
   }
 
   // Result cards are rendered from templates, so snippets must be escaped.
@@ -251,7 +232,8 @@
   }
 
   function cleanRoSnippet(text) {
-    return (text || "").replace(/\s*\(RZ\s+\d+\/\d{4}\/(?:RM|ZM)\)\s*$/i, "").trim();
+    // Imported PDF rows may omit the closing parenthesis; the RZ ID has its own label.
+    return (text || "").replace(/\s*\(\s*RZ\s*\d+\s*\/\s*\d{4}\s*\/\s*(?:RM|ZM)\s*\)?\s*$/i, "").trim();
   }
 
   // Keep ARIA busy in sync while async searches are in flight.
@@ -958,30 +940,55 @@
     return (boundary > SNIPPET_LEN / 2 ? prefix.slice(0, boundary) : prefix).trimEnd() + "…";
   }
 
-  // Keep this preview contract in sync with static_export.usneseni in usneseni-mesta.
-  function renderResolutionPreview(u, terms = []) {
+  function resolutionPreviewParts(u, terms = [], phrase = "") {
     const outcome = selectedOutcome();
-    let items = u.items || [];
+    let items = (u.items || []).map((item, index) => ({...item, index}));
     if (outcome && items.length) {
       items = outcomes.parts(u, outcome).filter(part => terms.every(term => outcomes.partText(u, part).includes(term)));
     }
     const summary = outcome && u.items?.length
       ? `${items.length} odpovídající ${items.length === 1 ? "bod" : items.length < 5 ? "body" : "bodů"} z ${u.items.length}`
       : summaryLabel(u);
-    const parts = summary ? [`<div class="usn-summary">${escapeHtml(summary)}</div>`] : [];
-    const subject = truncatePreview(u.subject || "");
-    if (subject) parts.push(`<div class="usn-snippet">${highlight(subject, terms)}</div>`);
+    const score = text => phrase && previews.ranges(text, [phrase]).length ? terms.length + 1
+      : terms.filter(term => previews.ranges(text, [term]).length).length;
+    const scoredItems = terms.length ? items.map(item => ({item, score: score(item.text)})) : [];
+    const bestScore = Math.max(0, ...scoredItems.map(part => part.score));
+    const matchedItems = scoredItems.filter(part => part.score && part.score === bestScore).map(part => part.item);
+    const subjectMatch = terms.length && previews.ranges(u.subject, terms).length;
+    const tailMatch = terms.length && previews.ranges(u.tail, terms).length;
+    const actionMatch = !u.items?.length && terms.length && previews.ranges((u.actions || []).join(" "), terms).length;
+    const subjectScore = terms.length ? score(u.subject) : 0;
+    const tailScore = terms.length ? score(u.tail) : 0;
+    const anchor = subjectScore > bestScore && subjectScore >= tailScore ? "predmet"
+      : tailScore > bestScore ? "dovetek" : matchedItems.length ? `bod-${matchedItems[0].index + 1}`
+      : subjectMatch ? "predmet"
+      : tailMatch ? "dovetek" : actionMatch && u.subject ? "predmet" : outcome && items.length ? `bod-${items[0].index + 1}`
+      : outcome && u.subject ? "predmet" : outcome && u.tail ? "dovetek" : "";
+    if (matchedItems.length) items = matchedItems;
+    else if (terms.length && !outcome && (subjectMatch || tailMatch)) items = [];
+    return {summary, items, anchor, tailMatch, matchedItems};
+  }
+
+  // Without a query, keep the static meeting-preview contract unchanged.
+  function renderResolutionPreview(u, terms = [], linkPoints = false, phrase = "") {
+    const {summary, items, tailMatch, matchedItems} = resolutionPreviewParts(u, terms, phrase);
+    const parts = summary ? [`<div class="usn-summary">${highlight(summary, terms)}</div>`] : [];
+    const preview = text => highlight(terms.length ? previews.snippet(text, terms, SNIPPET_LEN, phrase) : truncatePreview(text), terms);
+    const pointLink = (anchor, text) => linkPoints
+      ? `<a class="usn-point-link" href="${escapeHtml(hrefFromRecord(u, anchor))}">${text}</a>` : text;
+    if (u.subject) parts.push(`<div class="usn-snippet">${pointLink("predmet", preview(u.subject))}</div>`);
     if (items.length) {
-      const previews = items.slice(0, 3).map(item => {
+      const itemPreviews = items.slice(0, 3).map(item => {
         const label = String(item.label || "");
         const labelHtml = label ? `<strong class="usn-action-label">${escapeHtml(label)})</strong> ` : "";
-        return `<li>${labelHtml}${highlight(truncatePreview(item.text || ""), terms)}</li>`;
+        return `<li>${pointLink(`bod-${item.index + 1}`, labelHtml + preview(item.text))}</li>`;
       });
-      parts.push(`<ul class="usn-action-preview">${previews.join("")}</ul>`);
+      parts.push(`<ul class="usn-action-preview">${itemPreviews.join("")}</ul>`);
       const remaining = items.length - 3;
-      if (remaining > 0) parts.push(`<div class="usn-actions-more">${remaining < 5 ? "Další" : "Dalších"} ${remaining} rozhodnutí</div>`);
-    } else if (!subject && u.tail) {
-      parts.push(`<div class="usn-snippet">${highlight(truncatePreview(u.tail), terms)}</div>`);
+      if (remaining > 0) parts.push(`<div class="usn-actions-more">${remaining < 5 ? "Další" : "Dalších"} ${remaining} rozhodnutí${matchedItems.length ? " se shodou" : ""}</div>`);
+    }
+    if (tailMatch || (!u.subject && !items.length && u.tail)) {
+      parts.push(`<div class="usn-snippet">${pointLink("dovetek", preview(u.tail))}</div>`);
     }
     return parts.join("\n");
   }
@@ -991,16 +998,17 @@
     const roMatch = u.id.startsWith("RO/")
       ? findRoMatchContext(u, parsed)
       : null;
-    const href = hrefFromRecord(u);
-    const linkAttrs = "";
+    const isRo = u.id.startsWith("RO/");
+    const terms = parsed?.longWords || [];
+    const linkPoints = !isArchive && !isRo && terms.length > 0;
+    const href = hrefFromRecord(u, !isArchive && !isRo ? resolutionPreviewParts(u, terms, parsed?.raw).anchor : "");
 
-    const snippetRaw = truncatePreview((roMatch && roMatch.snippet) || firstSentence(u) || "");
+    const snippetRaw = previews.snippet((roMatch && roMatch.snippet) || firstSentence(u) || "", terms, SNIPPET_LEN, parsed?.raw);
     const snippetSafe = escapeHtml(snippetRaw);
     const snippet = parsed
       ? highlight(snippetRaw, parsed.longWords)
       : snippetSafe;
 
-    const isRo = u.id.startsWith("RO/");
     const typeLabel = u.type === "archive_document" ? "Archivní dokument" : (isArchive ? "Archivní usnesení" : (isRo ? "Rozpočtové opatření" : "Usnesení"));
     const category = u.classification?.category;
     const topicLabel = category ? (TOPICS[category] || category) : "";
@@ -1011,24 +1019,21 @@
 
     li.className = "usn-result";
 
-    li.innerHTML = `
-      <a href="${escapeHtml(href)}" class="usn-card"${linkAttrs}>
-        <div class="usn-head">
+    const head = `<div class="usn-head">
           <strong>${escapeHtml(title)}</strong>
           <span class="usn-date">${escapeHtml(date)}</span>
           <span class="usn-result-kind usn-doc-type ${typeClass}">${typeLabel}</span>
           ${topicLabel ? `<span class="usn-result-topic">${escapeHtml(topicLabel)}${u.classification?.source === "model" ? " · automaticky" : ""}</span>` : ""}
-        </div>
-
-        ${!isArchive && !isRo ? renderResolutionPreview(u, parsed?.longWords || []) : `<div class="usn-summary">${escapeHtml(summaryLabel(u))}</div>${isRo ? "" : `<div class="usn-snippet">${snippet}</div>`}`}
-
-        ${roMatch && roMatch.matches && roMatch.matches.length
+        </div>`;
+    const content = !isArchive && !isRo ? renderResolutionPreview(u, terms, linkPoints, parsed?.raw)
+      : `<div class="usn-summary">${escapeHtml(summaryLabel(u))}</div>${isRo ? "" : `<div class="usn-snippet">${snippet}</div>`}`;
+    const roLinks = roMatch && roMatch.matches && roMatch.matches.length
           ? `<div class="usn-ro-matches">${
             roMatch.matches.map((match, index) => `
-              <a href="${href}${match.anchor ? `#${match.anchor}` : ""}" class="usn-ro-match-item">
+              <a href="${escapeHtml(hrefFromRecord(u, match.anchor))}" class="usn-ro-match-item">
                 <span class="usn-ro-match-badge">${index === 0 ? "Shoda" : "Další"}</span>
-                <strong>${match.label}</strong>
-                <span>${highlight(truncatePreview(cleanRoSnippet(match.snippet) || match.label), parsed.longWords)}</span>
+                <strong>${escapeHtml(match.label)}</strong>
+                <span>${highlight(previews.snippet(cleanRoSnippet(match.snippet) || match.label, terms, SNIPPET_LEN, parsed?.raw), terms)}</span>
               </a>
             `).join("")
           }${
@@ -1036,10 +1041,12 @@
               ? `<div class="usn-ro-match-more">+${roMatch.totalMatches - roMatch.matches.length} další shody v tomto rozpočtovém opatření</div>`
               : ""
           }</div>`
-          : ""}
-      </a>
-      ${renderOutcomeReferences(u)}
-    `;
+          : "";
+    // Point links are siblings of the title link, so keyboard and touch can open each match.
+    li.innerHTML = (linkPoints || roLinks
+      ? `<div class="usn-card usn-card-points"><a href="${escapeHtml(href)}" class="usn-card-heading">${head}${roLinks ? content : ""}</a>${linkPoints ? content : ""}${roLinks}</div>`
+      : `<a href="${escapeHtml(href)}" class="usn-card">${head}${content}</a>`)
+      + renderOutcomeReferences(u);
 
     return li;
   }

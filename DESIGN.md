@@ -86,14 +86,36 @@ vytvořit vodorovné posouvání.
 Zpět na vyhledávání a drobečková navigace předcházejí jednomu bílému čtecímu
 povrchu. V něm je vlevo zarovnaný název, kompaktní metadata, původní text a
 nakonec odkaz na schůzi a poznámka o přepisu. Text má 16px a řádkování 1,6;
-metadata a poznámky 14px. Znění usnesení se při vizuálních úpravách nemění.
+metadata a poznámky 14px. Větší písmo patří pouze názvu stránky (32px, na
+telefonu 24px). Nadpisy uvnitř detailu včetně „Vývoj rozhodnutí“ mají 16px;
+od obsahu je odlišuje polotučný řez a odsazení. Detail používá pouze běžnou
+tučnost 400 a polotučný řez 600. Znění usnesení se při vizuálních úpravách nemění.
 Zdrojový odkaz uvádíme pouze tehdy, pokud ho poskytují existující podklady.
+Čísla odkazovaných usnesení v původním textu jsou běžné podtržené odkazy,
+pokud známe jejich vazbu a máme dostupný detail. Znění čísla včetně zkrácené
+podoby zůstává zachované; při přechodu se zachovává návrat do hledání.
+V patičce lze přejít na předchozí a další dostupné usnesení ze stejné schůze,
+řazené podle čísla usnesení. Na hranici schůze se příslušný odkaz nezobrazuje.
+Navigace funguje i bez JavaScriptu; při příchodu z hledání zachovává návrat.
+Popisek i číslo v odkazu Předchozí/Další mají shodně 16px a běžnou tučnost.
+
+Pozdější doložená revokace se zobrazí nad původním textem jako klidná zpráva
+s modrou levou hranou, datem, citací a odkazem na konkrétní bod zdrojového
+usnesení. Označení odkazovaného bodu přebíráme pouze z výslovného odkazu;
+z revokace části neodvozujeme stav celého usnesení.
+
+Vývoj rozhodnutí pod textem tvoří chronologický seznam přímých odkazů.
+Používá stejné ploché řádky a náhledy jako hledání, s označením právě čteného
+usnesení a směru vazby. Nedostupné dokumenty jsou uvedeny textově.
+Přehled funguje i bez JavaScriptu; při přechodu mezi usneseními se zachovává
+návrat do původního vyhledávání.
 
 ## Automatické pohledy na rozhodnutí
 
 Zkratky Zamítnuto, Změněno a Odloženo používají běžná kompaktní tlačítka vedle
 sekce hledání podle místa. Nastavují filtr ve stávajícím hledání. Vybraný filtr
 se ukazuje mezi aktivními volbami i při sbaleném upřesnění hledání.
+Filtr Změněno zahrnuje výslovné akce „revokuje“ a „mění“.
 Krátké vysvětlení uvádí příslušnou akci a dostupnost podkladů. Vícedílná
 usnesení zobrazují jen odpovídající body a jejich počet vůči celému usnesení.
 Odkazy na původní revokovaná usnesení jsou samostatné pod výsledkem, mimo

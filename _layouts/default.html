@@ -2,9 +2,7 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>
-        {% if page.title %}{{ page.title }} – {% endif %}{{ site.title }}
-    </title>
+    {% include seo.html %}
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
@@ -13,72 +11,6 @@
     {% endif %}
     <link rel="icon" type="image/png" sizes="512x512" href="{{ '/assets/img/favicon.png' | relative_url }}">
     <link rel="apple-touch-icon" href="{{ '/assets/img/favicon.png' | relative_url }}">
-
-    <script type="application/ld+json">
-    {
-    "@context": "https://schema.org",
-    "@graph": [
-        {
-        "@type": "Organization",
-        "@id": "{{ site.url }}/#organization",
-        "name": "Litovle.cz",
-        "url": "{{ site.url }}",
-        "description": "Nezávislý občanský web s praktickými informacemi a nástroji pro Litovel.",
-        "sameAs": [
-            "https://www.facebook.com/litovle/",
-            "https://github.com/honza-kasik/litovle.cz"
-        ]
-        },
-        {
-        "@type": "WebSite",
-        "@id": "{{ site.url }}/#website",
-        "name": "Litovle.cz",
-        "url": "{{ site.url }}",
-        "description": "Nezávislý občanský web s praktickými informacemi a nástroji pro Litovel.",
-        "publisher": {
-            "@id": "{{ site.url }}/#organization"
-        },
-        "inLanguage": "cs",
-        "hasPart": [
-            {
-            "@type": "WebSite",
-            "name": "Svoz odpadu Litovel",
-            "url": "https://svoz.litovle.cz/",
-            "description": "Kalendář svozu odpadu pro Litovel podle ulic."
-            },
-            {
-            "@type": "SoftwareApplication",
-            "name": "Svoz odpadu Litovel",
-            "operatingSystem": "Android",
-            "applicationCategory": "UtilitiesApplication",
-            "url": "https://play.google.com/store/apps/details?id=cz.litovle.svoz"
-            }
-        ]
-        }
-    ]
-    }
-    </script>
-
-    {% if page.layout == "usneseni" %}
-    <script type="application/ld+json">
-    {
-    "@context": "https://schema.org",
-    "@type": "Legislation",
-    "name": "{{ page.cislo }}",
-    "legislationType": "MunicipalResolution",
-    "datePublished": "{{ page.datum }}",
-    "legislationBody": "{{ page.organ }}",
-    "url": "{{ site.url }}{{ page.url }}"
-    }
-    </script>
-    {% endif %}
-
-    {% if page.description %}
-    <meta name="description" content="{{ page.description }}">
-    {% endif %}
-    {% if page.canonical_url %}
-    <link rel="canonical" href="{{ page.canonical_url }}">
-    {% endif %}
 
 </head>
 <body>

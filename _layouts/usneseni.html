@@ -54,6 +54,26 @@ layout: default
     {% unless page.rozpoctove_opatreni %}
 
     <footer class="usneseni-footer">
+    {% if page.meeting_navigation %}
+    <nav class="usn-sibling-nav" aria-label="Usnesení ze stejné schůze">
+      <div class="usn-sibling-links">
+        {% if page.meeting_navigation.previous %}
+        <a class="usn-sibling-link usn-sibling-previous usn-context-link" rel="prev"
+           href="{{ page.meeting_navigation.previous.url | relative_url }}">
+          <span>← Předchozí usnesení</span>
+          <span class="usn-sibling-id">{{ page.meeting_navigation.previous.id | escape }}</span>
+        </a>
+        {% endif %}
+        {% if page.meeting_navigation.next %}
+        <a class="usn-sibling-link usn-sibling-next usn-context-link" rel="next"
+           href="{{ page.meeting_navigation.next.url | relative_url }}">
+          <span>Další usnesení →</span>
+          <span class="usn-sibling-id">{{ page.meeting_navigation.next.id | escape }}</span>
+        </a>
+        {% endif %}
+      </div>
+    </nav>
+    {% endif %}
     <div class="usn-resolution-meeting" hidden></div>
     <p class="usneseni-note">
         Automaticky generovaný přepis veřejného usnesení.
@@ -65,4 +85,7 @@ layout: default
 </article>
 
 </div>
+{% unless page.rozpoctove_opatreni %}
+<script src="{{ '/usneseni/search-preview.js' | relative_url }}"></script>
+{% endunless %}
 <script src="{{ '/usneseni/detail.js' | relative_url }}"></script>

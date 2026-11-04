@@ -2,11 +2,12 @@
 <html lang="cs">
   <head>
     <meta charset="utf-8">
-    <title>{{ page.title | default: "Přesměrování" }}</title>
-    <link rel="canonical" href="{{ page.redirect_to | relative_url }}">
-    <meta http-equiv="refresh" content="0; url={{ page.redirect_to | relative_url }}">
+    <title>{{ page.title | default: "Přesměrování" | escape }}</title>
+    {% capture redirect_canonical %}{% include canonical-url.html url=page.redirect_to %}{% endcapture %}
+    <link rel="canonical" href="{{ redirect_canonical | escape }}">
+    <meta http-equiv="refresh" content="0; url={{ page.redirect_to | relative_url | escape }}">
     <script>
-      window.location.replace("{{ page.redirect_to | relative_url }}");
+      window.location.replace({{ page.redirect_to | relative_url | jsonify | replace: '<', '\u003c' }});
     </script>
   </head>
   <body>

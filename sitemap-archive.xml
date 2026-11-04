@@ -1,0 +1,18 @@
+---
+layout: null
+---
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+{%- assign archive_pages = site.html_pages | sort: 'url' -%}
+{%- for entry in archive_pages -%}
+  {%- if entry.url contains '/usneseni/archiv/' -%}
+    {%- unless entry.redirect_to %}
+  {%- assign entry_url = entry.canonical_url | default: entry.url -%}
+  {%- capture entry_canonical -%}{%- include canonical-url.html url=entry_url -%}{%- endcapture %}
+  <url>
+    <loc>{{ entry_canonical | xml_escape }}</loc>
+  </url>
+    {%- endunless -%}
+  {%- endif -%}
+{%- endfor %}
+</urlset>

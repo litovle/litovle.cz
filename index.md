@@ -1,6 +1,7 @@
 ---
 layout: landing
 title: Litovle.cz
+seo_title: Litovel – praktické informace a občanské projekty
 description: "Nezávislá občanská iniciativa propojující město, lidi a technologie."
 ---
 
