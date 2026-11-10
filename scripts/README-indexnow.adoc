@@ -1,0 +1,120 @@
+= Provoz IndexNow
+
+== Výběr stránek
+
+Zdrojem URL jsou sitemapy sestaveného webu. Publikované stránky a jejich adresy
+určuje Jekyll podle konfigurace webu. Python skript porovnává obsah jeho výstupů.
+
+`scripts/indexnow.py` má dva příkazy:
+
+* `prepare` exportuje dvě konkrétní Git revize do nového pracovního adresáře.
+  Zahrnuje pouze obsah commitů; necommitnuté změny ani nesledované soubory
+  z pracovního adresáře do snímků nevstupují.
+* `submit` načte sitemapy obou sestavení, porovná SHA-256 obsahu uvedených stránek
+  a odešle nové, změněné a odstraněné URL. Při změně adresy zahrne obě URL.
+
+Snímek obsahuje pouze URL uvedené v sitemapách dané revize. Změna `exclude`,
+permalinků, kategorií nebo pravidel Jekyllu se tím promítne automaticky.
+Změny šablon oznámí právě stránky, jejichž výsledný obsah se změnil.
+Chybějící soubor uvedený v sitemapě způsobí chybu; stav se neposune.
+
+== Stránky načítající data přes JavaScript
+
+Obsah některých aplikací není součástí jejich HTML. Takové stránky uvádějí
+datové soubory a skripty ve vlastním front matter, například:
+
+[source,yaml]
+----
+indexnow_dependencies:
+  - /assets/usneseni/
+  - /usneseni/*.js
+----
+
+Cesty jsou relativní ke kořeni sestaveného webu a začínají `/`. Podporují
+jednotlivé soubory, adresáře včetně podadresářů a globy. Jekyll je exportuje
+pomocí `indexnow-dependencies.json`; skript jejich obsah přidá do otisku stránky.
+Změna JSON dat tak oznámí URL vyhledávání. Soubory závislostí se samy neodesílají,
+pokud nemají vlastní položku v sitemapě.
+
+Chybějící deklarovaná cesta způsobí chybu. Při přidání nové datové aplikace
+stačí popsat její závislosti u stránky; Python skript se nemění.
+
+== Workflow a obnova po chybě
+
+Workflow `.github/workflows/indexnow.yml` navazuje na úspěšné publikování
+GitHub Pages z větve `main`. Ručně jej lze spustit v Actions jako `IndexNow`
+na větvi `main`. Forky ani jiné větve oznámení neodesílají.
+
+Pomocný modul `scripts/indexnow-revisions.cjs` vybere poslední úspěšná nasazení
+prostředí `github-pages` a případný artefakt `indexnow-checkpoint`. Opožděný běh
+pro již nahrazenou revizi přeskočí; nově nasazenou starší revizi zpracuje jako
+návrat ke starší verzi.
+
+Skripty automatizace běží z `main`, zdroje obou webů se exportují z konkrétních
+commitů. Pro obě sestavení se používá stejná oficiální akce
+https://github.com/actions/jekyll-build-pages[`actions/jekyll-build-pages`].
+Ověřovací klíč se čte ze sestavené publikované revize. Porovnání používá lokální
+sitemapy a soubory obou sestavení.
+
+Úspěšný běh uloží poslední zpracovaný commit do artefaktu na 90 dní. Při dalším
+běhu se jeho revize použije jako základ porovnání, takže se zahrnou i změny
+po neúspěšném oznámení. Commit se posune až po přijetí všech dávek. Při částečném
+úspěchu mohou být některé URL při opakování odeslány znovu.
+
+Bez dostupného artefaktu, včetně prvního běhu nebo po vypršení jeho platnosti,
+se použijí poslední dvě odlišné úspěšně nasazené revize. Pokud existuje jen jedna,
+uloží se počáteční commit bez oznámení historických stránek.
+Po vypršení artefaktu není zaručené dohnání starších neúspěšných oznámení.
+Po přepsání Git historie může být commit v artefaktu nedostupný; v tom případě
+je potřeba odstranit příslušný artefakt a spustit workflow znovu.
+
+== Klíč a odesílání
+
+Jekyll publikuje veřejný ověřovací soubor v kořeni webu. Tím ověření podle
+https://www.indexnow.org/documentation[specifikace IndexNow] pokrývá celý web.
+Adresa souboru odpovídá jeho `permalink` a konstantě `KEY_FILE` ve skriptu;
+každé oznámení ji předává v `keyLocation`.
+
+Při odesílání se použije klíč z publikovaného sestavení a zkontroluje se proti
+souboru na produkční doméně. Ke změně klíče stačí upravit jeho hodnotu ve
+zdrojovém ověřovacím souboru a publikovat web. Při změně adresy je nutné současně
+upravit `permalink` a `KEY_FILE`; jejich shodu ověřuje integrační test.
+Ruční registrace ani GitHub secret nejsou potřeba.
+
+Oznámení míří na https://api.indexnow.org/indexnow po nejvýše 10 000 URL.
+HTTP 200 znamená přijetí; HTTP 202 přijetí s čekajícím ověřením klíče.
+Ani jedna odpověď nezaručuje indexaci stránky. Síťové chyby, HTTP 429 a chyby
+serveru řeší skript nejvýše čtyřmi pokusy, s rostoucí prodlevou. `Retry-After`
+určuje minimální prodlevu, pokud jej server vrátí.
+
+Chybný běh lze zopakovat nebo ručně spustit workflow `IndexNow`. Logy ukazují
+HTTP odpověď a počet URL v dávce. HTTP 403 vyžaduje kontrolu dostupnosti a obsahu
+ověřovacího souboru; HTTP 422 kontrolu URL a klíče.
+
+== Lokální ověření
+
+Python 3.12+ používá jen standardní knihovnu. Node testy používají vestavěný
+test runner; integrační test se skutečným Jekyllem se spustí, pokud je `jekyll`
+dostupný v PATH:
+
+[source,shell]
+----
+python3 -m unittest discover -s tests -p 'test_indexnow*.py'
+node --check scripts/indexnow-revisions.cjs
+node --test tests/indexnow-revisions.test.cjs
+----
+
+Náhled porovnání commitnutých revizí vyžaduje také lokální Jekyll. Výstupní
+adresář musí být nový; export nepřepisuje již existující soubory:
+
+[source,shell]
+----
+python3 scripts/indexnow.py prepare --before HEAD~1 --after HEAD --output .indexnow-snapshots
+jekyll build --source .indexnow-snapshots/before --destination .indexnow-snapshots/before-site
+jekyll build --source .indexnow-snapshots/after --destination .indexnow-snapshots/after-site
+python3 scripts/indexnow.py submit --before-site .indexnow-snapshots/before-site --after-site .indexnow-snapshots/after-site --revisions .indexnow-snapshots/revisions.json --dry-run
+----
+
+Testy neodesílají požadavky do IndexNow. `--dry-run` vypíše URL bez odesílání,
+nemění checkpoint a nepotřebuje připojení k síti. Bez tohoto přepínače příkaz
+`submit` skutečně odesílá oznámení, proto používejte pouze publikované revize.

@@ -96,3 +96,17 @@ node --test tests/*.test.cjs
 
 Datové exporty a front matter stránek vznikají v `usneseni-mesta`; ruční úpravy
 vygenerovaných kategorií při dalším běhu pipeline přepíše export.
+
+== IndexNow
+
+Po úspěšném publikování na GitHub Pages spouští `.github/workflows/indexnow.yml`
+oznámení nových, změněných a odstraněných URL Bingu a ostatním vyhledávačům
+zapojeným do https://www.indexnow.org/documentation[IndexNow], včetně Seznamu.
+Workflow běží pouze v produkčním repozitáři `litovle/litovle.cz` na větvi `main`.
+
+Ověřovací soubor se publikuje spolu s webem; jeho adresu automatizace předává
+v `keyLocation`. Provoz nevyžaduje účet Bing Webmaster Tools ani GitHub secret.
+Přijetí oznámení samo o sobě nezaručuje zařazení stránky do výsledků vyhledávání.
+
+Výběr URL, první spuštění, opakování po chybě, lokální testy a změnu klíče popisuje
+link:scripts/README-indexnow.adoc[provozní dokumentace IndexNow].
