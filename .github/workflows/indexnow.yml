@@ -1,0 +1,105 @@
+name: IndexNow
+
+on:
+  workflow_run:
+    workflows: [pages-build-deployment, pages build and deployment]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: indexnow-production
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    if: >-
+      github.repository == 'litovle/litovle.cz' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out notification automation
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Find published revisions and the last submission
+        id: revisions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const resolveRevisions = require('./scripts/indexnow-revisions.cjs');
+            await resolveRevisions({github, context, core});
+
+      - name: Restore the last successfully submitted commit
+        if: steps.revisions.outputs.after && steps.revisions.outputs.checkpoint-run
+        uses: actions/download-artifact@v4
+        with:
+          name: indexnow-checkpoint
+          path: ${{ runner.temp }}/indexnow
+          run-id: ${{ steps.revisions.outputs.checkpoint-run }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        if: steps.revisions.outputs.after
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prepare immutable source snapshots
+        id: sources
+        if: steps.revisions.outputs.after
+        env:
+          BEFORE_SHA: ${{ steps.revisions.outputs.before }}
+          AFTER_SHA: ${{ steps.revisions.outputs.after }}
+        run: >-
+          python3 scripts/indexnow.py prepare
+          --before "$BEFORE_SHA" --after "$AFTER_SHA"
+          --output .indexnow-snapshots
+          --checkpoint "$RUNNER_TEMP/indexnow/commit.txt"
+          --github-output "$GITHUB_OUTPUT"
+
+      - name: Build the previous processed revision
+        if: steps.sources.outputs.before && steps.sources.outputs.before != steps.sources.outputs.after
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: .indexnow-snapshots/before
+          destination: .indexnow-snapshots/before-site
+          build_revision: ${{ steps.sources.outputs.before }}
+          verbose: false
+
+      - name: Build the published revision
+        if: steps.sources.outputs.after
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: .indexnow-snapshots/after
+          destination: .indexnow-snapshots/after-site
+          build_revision: ${{ steps.sources.outputs.after }}
+          verbose: false
+
+      - name: Submit changed URLs
+        if: steps.revisions.outputs.after
+        run: >-
+          python3 scripts/indexnow.py submit
+          --before-site .indexnow-snapshots/before-site
+          --after-site .indexnow-snapshots/after-site
+          --revisions .indexnow-snapshots/revisions.json
+          --checkpoint "$RUNNER_TEMP/indexnow/commit.txt"
+
+      - name: Save the successfully submitted commit
+        if: steps.revisions.outputs.after
+        uses: actions/upload-artifact@v4
+        with:
+          name: indexnow-checkpoint
+          path: ${{ runner.temp }}/indexnow/commit.txt
+          retention-days: 90
+          if-no-files-found: error
+          overwrite: true

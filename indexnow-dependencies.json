@@ -1,0 +1,16 @@
+---
+layout: null
+---
+[
+{%- assign dependency_pages = site.html_pages | concat: site.posts | sort: 'url' -%}
+{%- assign first_dependency = true -%}
+{%- for entry in dependency_pages -%}
+  {%- if entry.indexnow_dependencies -%}
+    {%- unless first_dependency -%},{%- endunless -%}
+    {%- assign first_dependency = false -%}
+    {%- assign entry_url = entry.canonical_url | default: entry.url -%}
+    {%- capture entry_canonical -%}{%- include canonical-url.html url=entry_url -%}{%- endcapture -%}
+    {"url": {{ entry_canonical | jsonify }}, "paths": {{ entry.indexnow_dependencies | jsonify }}}
+  {%- endif -%}
+{%- endfor -%}
+]

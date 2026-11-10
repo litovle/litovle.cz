@@ -6,3 +6,7 @@ _site/
 .bundle/
 vendor/
 .codex
+.DS_Store
+.serena/
+__pycache__/
+.indexnow-snapshots/
