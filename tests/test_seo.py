@@ -61,15 +61,17 @@ class SeoTest(unittest.TestCase):
     maxDiff = 1000
     def test_all_resolution_metadata_and_document_schema(self):
         paths = [path for path in (SITE / 'usneseni').glob('*/*/index.html')
-                 if re.fullmatch(r'(RM|ZM)-\d+-\d+-\d{4}', path.parent.name)]
+                 if re.fullmatch(r'(?:(?:RM|ZM)-\d+-\d+-\d{4}|U[RZ]-\d+-\d+-(?:\d{4}|\d{2}))', path.parent.name)]
         self.assertGreater(len(paths), 0, 'Run jekyll build first')
         for path in paths:
             with self.subTest(page=path.parent.name):
                 info = Head(path.read_text())
+                slug = path.parent.name
+                official_id = '/'.join(slug.rsplit('-', 1)) if slug.startswith(('UR-', 'UZ-')) else slug.replace('-', '/')
                 canonical = 'https://litovle.cz/' + str(path.relative_to(SITE)).removesuffix('index.html')
                 self.assertEqual(info.canonicals, [canonical])
                 self.assertEqual(len(info.titles), 1)
-                self.assertIn(path.parent.name.replace('-', '/'), info.titles[0])
+                self.assertIn(official_id, info.titles[0])
                 self.assertIn('Litovel', info.titles[0])
                 self.assertEqual(len(info.descriptions), 1)
                 self.assertTrue(info.descriptions[0])
@@ -77,7 +79,7 @@ class SeoTest(unittest.TestCase):
                 self.assertEqual(info.meta['og:url'], canonical)
                 graph = info.structured[0]['@graph']
                 document = next(node for node in graph if node['@type'] == 'Legislation')
-                self.assertEqual(document['identifier'], path.parent.name.replace('-', '/'))
+                self.assertEqual(document['identifier'], official_id)
                 self.assertEqual(document['legislationPassedBy']['@type'], 'GovernmentOrganization')
                 self.assertNotIn('legislationBody', document)
                 self.assertNotIn('datePublished', document)

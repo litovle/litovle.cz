@@ -58,6 +58,18 @@ a uvedená přímo v revokačním bodu. Chybějící podklad se označí slovně
 
 Výstupem jsou statické datové indexy, které lze dlouhodobě provozovat bez závislosti na serverové logice.
 
+Roční vyhledávací indexy v `assets/usneseni/**/index/` obsahují tabulku
+identifikátorů `ids` a slovník `tokens`, jehož seznamy odkazují na pozice v této
+tabulce číslované od nuly. Prohlížeč převádí na identifikátory pouze odkazy pro
+právě hledaný výraz. Tabulka je samostatná pro každý soubor a nezávisí na pořadí
+záznamů v ročních datech.
+
+Oficiální čísla usnesení se zachovávají ve zdrojovém tvaru. Formáty `RM/...`
+a `ZM/...` i jejich URL jsou podporované společně s `UR-…` a `UZ-…`.
+Stejné číslo se používá v hledání, na stránce usnesení,
+v metadatech i v odkazech mezi rozhodnutími. Orgán, číslo jednání a celý rok
+pro členění stránek z něj čte společný `usneseni/resolution-id.js`.
+
 Více informací:
 https://github.com/litovle/usneseni-mesta
 
@@ -96,6 +108,13 @@ node --test tests/*.test.cjs
 
 Datové exporty a front matter stránek vznikají v `usneseni-mesta`; ruční úpravy
 vygenerovaných kategorií při dalším běhu pipeline přepíše export.
+
+Tlačítko pro návrat nahoru obsluhuje společný `assets/js/site.js`, načítaný výchozím
+layoutem. Odkazy pro návrat z detailu usnesení, archivu a rozpočtových opatření
+obsluhuje `usneseni/back-link.js`; odkaz na tento soubor generuje exportér
+v `usneseni-mesta`. Parametr `back` přijímá pouze adresy stejného webu v povolených
+sekcích; další sekce určuje atribut `data-back-prefixes` na značce skriptu.
+Bez platného parametru zůstává zachován výchozí odkaz z exportu.
 
 == IndexNow
 

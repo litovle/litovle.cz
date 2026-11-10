@@ -32,13 +32,19 @@ function app(category = "", query = "", fixtureRecords = null) {
     "/assets/usneseni/ro/meta.json": {2026: {count: 1}},
     "/assets/usneseni/archive/meta.json": {2026: {count: 1}},
     "/assets/usneseni/data/2026.json": records.filter(r => !r.id.startsWith("RO/") && !r.type?.startsWith("archive_")),
-    "/assets/usneseni/index/2026.json": {chodniku: [records[0].id], kulturni: [records[1].id]},
+    "/assets/usneseni/index/2026.json": {
+      ids: [records[1].id, records[0].id],
+      tokens: {chodniku: [1], kulturni: [0], spolecne: [1], [records[0].id.toLowerCase()]: [1], [records[1].id.toLowerCase()]: [0]}
+    },
     "/assets/usneseni/ro/data/2026.json": records.filter(r => r.id.startsWith("RO/")),
+    "/assets/usneseni/ro/index/2026.json": {ids: ["RO/1/2026"], tokens: {spolecne: [0]}},
     "/assets/usneseni/archive/data/2026.json": records.filter(r => r.type?.startsWith("archive_")),
+    "/assets/usneseni/archive/index/2026.json": {ids: ["archive-1"], tokens: {spolecne: [0]}},
   };
   const context = vm.createContext({
     UsneseniOutcomes: require("../usneseni/outcomes.js"),
     UsneseniSearchPreview: require("../usneseni/search-preview.js"),
+    UsneseniResolutionId: require("../usneseni/resolution-id.js"),
     document: {createDocumentFragment: () => ({appendChild: () => {}}), getElementById: node, querySelector: selector => selector === ".usn-search-panel" ? panel : null, createElement: () => ({dataset: {}, setAttribute: function(name, value) {this[name] = value;}})},
     location: {pathname: "/usneseni/", search: "", hash: ""},
     history: {replaceState: (_, __, url) => {context.location.search = url;}},
@@ -55,7 +61,7 @@ function app(category = "", query = "", fixtureRecords = null) {
     YEAR_INPUTS = [{value: "2026", checked: true}];
     TYPE_INPUTS = [{value: "usneseni", checked: true}, {value: "ro", checked: true}];
     ORG_INPUTS = [{value: "Rada města Litovel", checked: true}, {value: "Zastupitelstvo města Litovel", checked: true}];
-    globalThis.api = {loadYear, setFiltersOpen, bindUiEvents, truncatePreview, cleanRoSnippet, buildSearchText, renderResolutionPreview, search, searchWithOpenFilters,
+    globalThis.api = {staticUrlFromId, meetingKey, redirectFromHash, indexHits, collectCandidates, loadYear, setFiltersOpen, bindUiEvents, truncatePreview, cleanRoSnippet, buildSearchText, renderResolutionPreview, search, searchWithOpenFilters,
       sources: (resolutions, budgets, archive) => {META = resolutions; RO_META = budgets; ARCHIVE_META = archive;},
       findResults, parseQuery, updateUrl, loadFromUrl, filtersAreDefault, selectedOutcome, browseOutcome,
       paginate, renderResultCard, selectedTopic, loadMeta, renderWelcomeOverview, filterSummary, updateSearchPresentation,
@@ -78,10 +84,58 @@ function app(category = "", query = "", fixtureRecords = null) {
       setPage: n => {PAGE = n;}, setOrg: () => {ORG_INPUTS[0].checked = false;}};
   `);
   vm.runInContext(source, context);
-  return {api: context.api, context, node, requests, panel, events};
+  return {api: context.api, context, node, requests, panel, events, payloads};
 }
 
 function ids(rows) {return Array.from(rows, row => row.id);}
+
+test("official Usneseni.cz IDs remain searchable, displayed and linked without aliases", async () => {
+  const records = [
+    {id: "UZ-12-1/26", organ: "Zastupitelstvo města Litovel", datum: "2026-11-02", actions: ["schvaluje"], subject: "opravu školy"},
+    {id: "UZ-13-1/26", organ: "Zastupitelstvo města Litovel", datum: "2026-11-02", actions: ["schvaluje"], subject: "pronájem pozemku"},
+  ];
+  const {api, node, payloads} = app("", "UZ-12-1/26", records);
+  payloads["/assets/usneseni/index/2026.json"] = {ids: records.map(record => record.id), tokens: {"uz-12-1/26": [0], "uz-13-1/26": [1]}};
+  const results = await api.findResults(api.parseQuery("UZ-12-1/26"));
+  assert.deepEqual(ids(results), ["UZ-12-1/26"]);
+  assert.equal(api.meetingKey(results[0]), "2026-ZM-1");
+  const card = api.renderResultCard(results[0]).innerHTML;
+  assert.match(card, /UZ-12-1\/26/);
+  assert.match(card, /\/usneseni\/2026\/UZ-12-1-26\//);
+  assert.doesNotMatch(card, /ZM\/12\/1\/2026/);
+  node("usn-q").value = "ZM/12/1/2026";
+  assert.deepEqual(ids(await api.findResults(api.parseQuery("ZM/12/1/2026"))), []);
+});
+
+test("full slash IDs are searchable alongside native IDs", async () => {
+  const {api} = app();
+  assert.deepEqual(ids(await api.findResults(api.parseQuery("RM/1/1/2026"))), ["RM/1/1/2026"]);
+});
+
+test("numeric references use each dataset's ID table, independently of data order", async () => {
+  const {api} = app();
+  assert.deepEqual(ids(await api.collectCandidates("spolecne", ["2026"])), ["RM/1/1/2026", "RO/1/2026", "archive-1"]);
+  assert.deepEqual(ids(await api.collectCandidates("kulturni", ["2026"])), ["RM/2/1/2026"]);
+  assert.deepEqual(ids(await api.collectCandidates("nenalezeno", ["2026"])), []);
+});
+
+test("cached indexes with full document IDs can be mixed with compact indexes", async () => {
+  const {api, payloads} = app();
+  payloads["/assets/usneseni/index/2026.json"] = {spolecne: ["RM/2/1/2026"]};
+  assert.deepEqual(ids(await api.collectCandidates("spolecne", ["2026"])), ["RM/2/1/2026", "RO/1/2026", "archive-1"]);
+});
+
+test("index format field names and inherited object properties are valid search terms", () => {
+  const {api} = app();
+  const compact = {ids: ["document"], tokens: {ids: [0], tokens: [0], constructor: [0]}};
+  const direct = {ids: ["first"], tokens: ["second"]};
+  for (const term of ["ids", "tokens", "constructor"]) {
+    assert.deepEqual(Array.from(api.indexHits(compact, term)), ["document"]);
+  }
+  assert.deepEqual(Array.from(api.indexHits(direct, "ids")), ["first"]);
+  assert.deepEqual(Array.from(api.indexHits(direct, "tokens")), ["second"]);
+  assert.deepEqual(Array.from(api.indexHits({}, "constructor")), []);
+});
 
 test("topic-only browsing, clearing topic, and unknown category", async () => {
   const {api, node, context} = app("transport");
@@ -513,6 +567,43 @@ test("outcome-only browsing respects topic and document filters, and excludes mi
   assert.deepEqual(ids(await api.findResults(null)), []);
 });
 
+for (const id of ["RM/12/1/2026", "ZM/12/1/2026", "UR-012-01/26", "UZ-012-01/26"]) {
+  test(`official ID ${id} works with outcome filters and preserves decision point boundaries`, async () => {
+    for (const [outcome, action] of [["rejected", "neschvaluje"], ["changed", "mění"], ["deferred", "odkládá"]]) {
+      const organ = id.startsWith("ZM/") || id.startsWith("UZ-") ? "ZM" : "RM";
+      const record = {id, organ, datum: "2026-11-02", actions: [action, "schvaluje"], items: [
+        {label: "a", text: "schvaluje opravu chodníku"},
+        {label: "b", text: `${action} pronájem zahrady`},
+        {label: "c", text: `${action} opravu školy`},
+      ]};
+      const other = {id: id.replace("12", "99"), organ, datum: "2026-11-02", actions: [action], subject: "pronájem zahrady"};
+      const {api, node} = app("", id, [record, other]);
+      node("usn-outcome").value = outcome;
+
+      const exactQuery = api.parseQuery(id.toLowerCase());
+      const results = await api.findResults(exactQuery);
+      assert.deepEqual(ids(results), [id], outcome);
+      const [result] = results;
+      const card = api.renderResultCard(result, exactQuery).innerHTML;
+      assert.match(card, /2 odpovídající body z 3/);
+      assert.match(card, /#bod-2/);
+      assert.doesNotMatch(card, /#bod-1|opravu chodníku/);
+
+      const pointQuery = api.parseQuery(`${id} zahrady`);
+      assert.deepEqual(ids(await api.findResults(pointQuery)), [id], outcome);
+      const pointCard = api.renderResultCard(result, pointQuery).innerHTML;
+      assert.match(pointCard, /#bod-2/);
+      assert.doesNotMatch(pointCard, /#bod-1|#bod-3|opravu školy/);
+      assert.deepEqual(ids(await api.findResults(api.parseQuery(`${id} chodniku`))), [], outcome);
+      assert.deepEqual(ids(await api.findResults(api.parseQuery(`${id} zahrady skoly`))), [], outcome);
+      assert.deepEqual(ids(await api.findResults(api.parseQuery(other.id))), [other.id], "Single decisions are searchable by ID too");
+
+      node("usn-outcome").value = outcome === "rejected" ? "changed" : "rejected";
+      assert.deepEqual(ids(await api.findResults(exactQuery)), [], "ID must still respect the selected outcome");
+    }
+  });
+}
+
 test("text search must match the selected decision point", async () => {
   const {api, node} = app("", "", outcomeRecords);
   node("usn-outcome").value = "rejected";
@@ -547,6 +638,29 @@ test("revocations link available originals outside the main result link", async 
   const unavailable = api.renderResultCard(missing, null).innerHTML;
   assert.ok(unavailable.includes("nepodařilo dohledat"));
   assert.ok(!unavailable.includes('href="/usneseni/2026/RM-9999-1-2026/'));
+});
+
+test("native references load the full target year and preserve both ID schemes", async () => {
+  const records = [
+    {id: "UZ-2-1/26", datum: "2026-11-02", organ: "Zastupitelstvo města Litovel", actions: ["revokuje"],
+      subject: "usnesení UZ-1-1/25 a ZM/1/1/2025.", references_out: [
+        {raw: "UZ-1-1/25", resolved: "UZ-1-1/25"}, {raw: "ZM/1/1/2025", resolved: "ZM/1/1/2025"}]},
+    {id: "UZ-3-1/26", datum: "2026-11-02", organ: "Zastupitelstvo města Litovel", actions: ["schvaluje"], subject: "opravu školy"},
+  ];
+  const {api, node, requests, payloads} = app("", "", records);
+  api.sources({2026: {count: 2}, 2025: {count: 2}}, {}, {});
+  payloads["/assets/usneseni/data/2025.json"] = [
+    {id: "UZ-1-1/25", datum: "2025-11-02", organ: "Zastupitelstvo města Litovel", subject: "původní rozhodnutí"},
+    {id: "ZM/1/1/2025", datum: "2025-10-02", organ: "Zastupitelstvo města Litovel", subject: "starší rozhodnutí"},
+  ];
+  payloads["/assets/usneseni/index/2025.json"] = {ids: [], tokens: {}};
+  node("usn-outcome").value = "changed";
+  const [record] = await api.findResults(null);
+  const html = api.renderResultCard(record).innerHTML;
+  assert.ok(requests.includes("/assets/usneseni/data/2025.json"));
+  assert.ok(!requests.some(url => /\/25\.json$/.test(url)));
+  assert.match(html, /href="\/usneseni\/2025\/UZ-1-1-25\/\?back=.*?">UZ-1-1\/25<\/a>/);
+  assert.match(html, /href="\/usneseni\/2025\/ZM-1-1-2025\/\?back=.*?">ZM\/1\/1\/2025<\/a>/);
 });
 
 test("outcome shortcut starts results without a query and clearing restores welcome", async () => {

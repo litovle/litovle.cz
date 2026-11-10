@@ -39,6 +39,19 @@ test("mixed resolutions retain the exact matching item and its original label", 
   assert.equal(outcomes.parts(record({actions: ["neschvaluje"], items: [{text: "schvaluje žádost"}]}), "rejected").length, 0);
 });
 
+test("Usneseni.cz points retain their wording while repeated organ names allow outcome matching", () => {
+  const mixed = record({id: "UZ-2-1/26", items: [
+    {label: "a", text: "Zastupitelstvo města Litovel neschvaluje prodej pozemku."},
+    {label: "b", text: "Zastupitelstvo města Litovel revokuje usnesení UZ-1-1/26."},
+    {label: "c", text: "Zastupitelstvo města Litovel schvaluje novou smlouvu."},
+  ], references_out: [{raw: "UZ-1-1/26", resolved: "UZ-1-1/26"}]});
+  assert.deepEqual(outcomes.parts(mixed, "rejected"), [{...mixed.items[0], index: 0}]);
+  assert.deepEqual(outcomes.parts(mixed, "changed"), [{...mixed.items[1], index: 1}]);
+  assert.deepEqual(outcomes.references(mixed, "changed"), ["UZ-1-1/26"]);
+  const council = record({items: [{text: "Rada města Litovel odkládá rozhodnutí."}]});
+  assert.equal(outcomes.parts(council, "deferred").length, 1);
+});
+
 test("records without explicit outcome data stay outside filtered results", () => {
   for (const r of [record({id: "RO/1/2026", actions: ["neschvaluje"]}), record({type: "archive_document", actions: ["neschvaluje"]}), record({type: "archive_resolution", actions: ["neschvaluje"]}), record({})]) {
     assert.deepEqual(outcomes.parts(r, "rejected"), []);

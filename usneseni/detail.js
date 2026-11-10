@@ -40,7 +40,7 @@
   if (context) {
     for (const link of root.querySelectorAll("a.usn-context-link")) {
       const url = new URL(link.getAttribute("href"), location.href);
-      if (url.origin !== location.origin || !/^\/usneseni\/\d{4}\/(?:RM|ZM)-\d+-\d+-\d{4}\/$/.test(url.pathname)) continue;
+      if (url.origin !== location.origin || !globalThis.UsneseniResolutionId.isPath(url.pathname)) continue;
       url.searchParams.set("back", context.pathname + context.search);
       link.href = url.pathname + url.search + url.hash;
     }
