@@ -1,5 +1,6 @@
 /* Explicit decision actions only; no inferred disputes or project status. */
 ((root) => {
+  const ids = typeof module !== "undefined" && module.exports ? require("./resolution-id.js") : root.UsneseniResolutionId;
   const rules = {
     rejected: {label: "Zamítnuto", actions: ["neschvaluje", "nesouhlasí"], note: "Body s akcí „neschvaluje“ nebo „nesouhlasí“."},
     changed: {label: "Změněno", actions: ["revokuje", "mění"], note: "Body s akcí „revokuje“ nebo „mění“. Rozsah změny je uveden v textu usnesení."},
@@ -11,12 +12,12 @@
 
   function parts(record, key) {
     const rule = definition(key);
-    if (!rule || !/^(RM|ZM)\/\d+\/\d+\/\d{4}$/.test(record.id || "")
+    if (!rule || !ids.parse(record.id)
       || record.type === "archive_document" || record.type === "archive_resolution") return [];
     const actions = rule.actions.map(normalize);
     if (record.items?.length) {
       return record.items.map((item, index) => ({...item, index})).filter(item => {
-        const text = normalize(item.text);
+        const text = normalize(item.text).replace(/^(?:rada|zastupitelstvo) mesta litovel[ ,]+/, "");
         return actions.some(action => text === action || text.startsWith(action + " ") || text.startsWith(action + ".") || text.startsWith(action + ":"));
       });
     }
@@ -25,7 +26,7 @@
   }
 
   function partText(record, part) {
-    return normalize([part.index === null ? "" : record.subject || "", part.text || ""].join(" "));
+    return normalize([record.id || "", part.index === null ? "" : record.subject || "", part.text || ""].join(" "));
   }
 
   function references(record, key) {
@@ -33,7 +34,7 @@
     const texts = parts(record, key).map(part => normalize(part.text));
     const seen = new Set();
     return (record.references_out || []).filter(ref => {
-      if (!/^(RM|ZM)\/\d+\/\d+\/\d{4}$/.test(ref.resolved || "") || !ref.raw || seen.has(ref.resolved)) return false;
+      if (!ids.parse(ref.resolved) || !ref.raw || seen.has(ref.resolved)) return false;
       if (!texts.some(text => text.includes(normalize(ref.raw)))) return false;
       seen.add(ref.resolved);
       return true;

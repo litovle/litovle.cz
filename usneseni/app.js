@@ -107,9 +107,7 @@
       return `/rozpoctova-opatreni/${anchorFromId(id)}/`;
     }
 
-    const year = id.split("/").pop();
-    const slug = anchorFromId(id);
-    return `/usneseni/${year}/${slug}/`;
+    return globalThis.UsneseniResolutionId.url(id) || "#";
   }
 
   function isArchiveRecord(u) {
@@ -126,7 +124,7 @@
 
   function idFromHash() {
     if (!location.hash) return null;
-    return location.hash.substring(1).replace(/-/g, "/");
+    return globalThis.UsneseniResolutionId.fromHash(location.hash);
   }
 
   // Pick a short sentence that can stand in as a result snippet.
@@ -196,7 +194,8 @@
         ...(u.actions || []),
         u.subject || "",
         ...(u.items || []).map(i => i.text),
-        u.tail || ""
+        u.tail || "",
+        u.id || ""
       ].join(" ")
     );
   }
@@ -619,8 +618,8 @@
   }
 
   function meetingKey(record) {
-    const match = String(record.id || "").match(/^(RM|ZM)\/(\d+)\/(\d+)\/(\d{4})$/);
-    if (match) return `${match[4]}-${match[1]}-${match[3]}`;
+    const parts = globalThis.UsneseniResolutionId.parse(record.id);
+    if (parts) return `${parts.year}-${parts.organ}-${parts.meeting}`;
     if (record.meeting_key) return record.meeting_key;
     const organ = /rada/i.test(record.organ || "") ? "RM" : "ZM";
     const number = record.meeting_no || record.session_no || "";
@@ -934,7 +933,7 @@
   async function finishResults(results) {
     results = sortResults(results);
     if (selectedOutcome() === "changed") {
-      const years = new Set(results.flatMap(u => outcomes.references(u, "changed")).map(id => id.split("/").pop()));
+      const years = new Set(results.flatMap(u => outcomes.references(u, "changed")).map(id => globalThis.UsneseniResolutionId.parse(id)?.year));
       await Promise.all([...years].filter(year => Object.hasOwn(META, year)).map(loadYear));
     }
     return results;
@@ -1062,8 +1061,9 @@
   function renderOutcomeReferences(u) {
     if (selectedOutcome() !== "changed" || !outcomes.parts(u, "changed").length) return "";
     const ids = outcomes.references(u, "changed");
-    const available = ids.filter(id => DATA_MAP[id.split("/").pop()]?.[id]);
-    const links = available.map(id => `<a href="${escapeHtml(hrefFromRecord(DATA_MAP[id.split("/").pop()][id]))}">${escapeHtml(id)}</a>`);
+    const recordForId = id => DATA_MAP[globalThis.UsneseniResolutionId.parse(id)?.year]?.[id];
+    const available = ids.filter(id => recordForId(id));
+    const links = available.map(id => `<a href="${escapeHtml(hrefFromRecord(recordForId(id)))}">${escapeHtml(id)}</a>`);
     if (!links.length) return '<p class="usn-related-decisions">Původní usnesení se v dostupných datech nepodařilo dohledat.</p>';
     return `<p class="usn-related-decisions">Původní usnesení: ${links.join(", ")}${available.length < ids.length ? " · další odkazované usnesení není dostupné" : ""}</p>`;
   }
@@ -1146,7 +1146,7 @@
     const id = idFromHash();
     if (!id) return false;
 
-    if (!/^(RM|ZM)\/\d+\/\d+\/\d+$/.test(id)) return false;
+    if (!globalThis.UsneseniResolutionId.parse(id)) return false;
 
     window.location.replace(staticUrlFromId(id));
     return true;
