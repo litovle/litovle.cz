@@ -797,6 +797,14 @@
     return { raw, words, longWords, anchor };
   }
 
+  // Resolve only the requested term; keep the compact index numeric in memory.
+  function indexHits(index, term) {
+    const compact = Array.isArray(index.ids) && index.tokens && !Array.isArray(index.tokens);
+    const postings = compact ? index.tokens : index;
+    const hits = Object.hasOwn(postings, term) ? postings[term] : [];
+    return compact ? hits.map(position => index.ids[position]) : hits;
+  }
+
   // Pull likely candidates only from selected years and the strongest anchor term.
   async function collectCandidates(anchor, years) {
     const out = new Map();
@@ -810,9 +818,9 @@
         for (const u of [...DATA[y], ...RO_DATA[y], ...ARCHIVE_DATA[y]]) out.set(u.id, u);
         continue;
       }
-      const resolutionHit = INDEX[y][anchor] || [];
-      const roHit = RO_INDEX[y][anchor] || [];
-      const archiveHit = ARCHIVE_INDEX[y][anchor] || [];
+      const resolutionHit = indexHits(INDEX[y], anchor);
+      const roHit = indexHits(RO_INDEX[y], anchor);
+      const archiveHit = indexHits(ARCHIVE_INDEX[y], anchor);
 
       for (const id of resolutionHit) {
         const u = DATA_MAP[y][id];

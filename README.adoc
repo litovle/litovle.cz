@@ -58,6 +58,12 @@ a uvedená přímo v revokačním bodu. Chybějící podklad se označí slovně
 
 Výstupem jsou statické datové indexy, které lze dlouhodobě provozovat bez závislosti na serverové logice.
 
+Roční vyhledávací indexy v `assets/usneseni/**/index/` obsahují tabulku
+identifikátorů `ids` a slovník `tokens`, jehož seznamy odkazují na pozice v této
+tabulce číslované od nuly. Prohlížeč převádí na identifikátory pouze odkazy pro
+právě hledaný výraz. Tabulka je samostatná pro každý soubor a nezávisí na pořadí
+záznamů v ročních datech.
+
 Více informací:
 https://github.com/litovle/usneseni-mesta
 

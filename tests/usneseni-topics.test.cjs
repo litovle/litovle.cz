@@ -32,9 +32,11 @@ function app(category = "", query = "", fixtureRecords = null) {
     "/assets/usneseni/ro/meta.json": {2026: {count: 1}},
     "/assets/usneseni/archive/meta.json": {2026: {count: 1}},
     "/assets/usneseni/data/2026.json": records.filter(r => !r.id.startsWith("RO/") && !r.type?.startsWith("archive_")),
-    "/assets/usneseni/index/2026.json": {chodniku: [records[0].id], kulturni: [records[1].id]},
+    "/assets/usneseni/index/2026.json": {ids: [records[1].id, records[0].id], tokens: {chodniku: [1], kulturni: [0], spolecne: [1]}},
     "/assets/usneseni/ro/data/2026.json": records.filter(r => r.id.startsWith("RO/")),
+    "/assets/usneseni/ro/index/2026.json": {ids: ["RO/1/2026"], tokens: {spolecne: [0]}},
     "/assets/usneseni/archive/data/2026.json": records.filter(r => r.type?.startsWith("archive_")),
+    "/assets/usneseni/archive/index/2026.json": {ids: ["archive-1"], tokens: {spolecne: [0]}},
   };
   const context = vm.createContext({
     UsneseniOutcomes: require("../usneseni/outcomes.js"),
@@ -55,7 +57,7 @@ function app(category = "", query = "", fixtureRecords = null) {
     YEAR_INPUTS = [{value: "2026", checked: true}];
     TYPE_INPUTS = [{value: "usneseni", checked: true}, {value: "ro", checked: true}];
     ORG_INPUTS = [{value: "Rada města Litovel", checked: true}, {value: "Zastupitelstvo města Litovel", checked: true}];
-    globalThis.api = {loadYear, setFiltersOpen, bindUiEvents, truncatePreview, cleanRoSnippet, buildSearchText, renderResolutionPreview, search, searchWithOpenFilters,
+    globalThis.api = {indexHits, collectCandidates, loadYear, setFiltersOpen, bindUiEvents, truncatePreview, cleanRoSnippet, buildSearchText, renderResolutionPreview, search, searchWithOpenFilters,
       sources: (resolutions, budgets, archive) => {META = resolutions; RO_META = budgets; ARCHIVE_META = archive;},
       findResults, parseQuery, updateUrl, loadFromUrl, filtersAreDefault, selectedOutcome, browseOutcome,
       paginate, renderResultCard, selectedTopic, loadMeta, renderWelcomeOverview, filterSummary, updateSearchPresentation,
@@ -78,10 +80,35 @@ function app(category = "", query = "", fixtureRecords = null) {
       setPage: n => {PAGE = n;}, setOrg: () => {ORG_INPUTS[0].checked = false;}};
   `);
   vm.runInContext(source, context);
-  return {api: context.api, context, node, requests, panel, events};
+  return {api: context.api, context, node, requests, panel, events, payloads};
 }
 
 function ids(rows) {return Array.from(rows, row => row.id);}
+
+test("numeric references use each dataset's ID table, independently of data order", async () => {
+  const {api} = app();
+  assert.deepEqual(ids(await api.collectCandidates("spolecne", ["2026"])), ["RM/1/1/2026", "RO/1/2026", "archive-1"]);
+  assert.deepEqual(ids(await api.collectCandidates("kulturni", ["2026"])), ["RM/2/1/2026"]);
+  assert.deepEqual(ids(await api.collectCandidates("nenalezeno", ["2026"])), []);
+});
+
+test("cached indexes with full document IDs can be mixed with compact indexes", async () => {
+  const {api, payloads} = app();
+  payloads["/assets/usneseni/index/2026.json"] = {spolecne: ["RM/2/1/2026"]};
+  assert.deepEqual(ids(await api.collectCandidates("spolecne", ["2026"])), ["RM/2/1/2026", "RO/1/2026", "archive-1"]);
+});
+
+test("index format field names and inherited object properties are valid search terms", () => {
+  const {api} = app();
+  const compact = {ids: ["document"], tokens: {ids: [0], tokens: [0], constructor: [0]}};
+  const direct = {ids: ["first"], tokens: ["second"]};
+  for (const term of ["ids", "tokens", "constructor"]) {
+    assert.deepEqual(Array.from(api.indexHits(compact, term)), ["document"]);
+  }
+  assert.deepEqual(Array.from(api.indexHits(direct, "ids")), ["first"]);
+  assert.deepEqual(Array.from(api.indexHits(direct, "tokens")), ["second"]);
+  assert.deepEqual(Array.from(api.indexHits({}, "constructor")), []);
+});
 
 test("topic-only browsing, clearing topic, and unknown category", async () => {
   const {api, node, context} = app("transport");

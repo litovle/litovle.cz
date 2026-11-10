@@ -318,4 +318,4 @@ Zjistěte, co město schválilo pro vaše téma, ulici nebo místní část.
 
 <script src="/usneseni/outcomes.js"></script>
 <script src="/usneseni/search-preview.js"></script>
-<script src="/usneseni/app.js"></script>
+<script src="/usneseni/app.js?v=2"></script>
