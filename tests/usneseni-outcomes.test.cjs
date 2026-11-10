@@ -39,7 +39,7 @@ test("mixed resolutions retain the exact matching item and its original label", 
   assert.equal(outcomes.parts(record({actions: ["neschvaluje"], items: [{text: "schvaluje žádost"}]}), "rejected").length, 0);
 });
 
-test("Usneseni.cz points retain their wording while repeated organ names allow outcome matching", () => {
+test("tabular PDF points retain their wording while repeated organ names allow outcome matching", () => {
   const mixed = record({id: "UZ-2-1/26", items: [
     {label: "a", text: "Zastupitelstvo města Litovel neschvaluje prodej pozemku."},
     {label: "b", text: "Zastupitelstvo města Litovel revokuje usnesení UZ-1-1/26."},

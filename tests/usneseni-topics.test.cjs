@@ -89,7 +89,7 @@ function app(category = "", query = "", fixtureRecords = null) {
 
 function ids(rows) {return Array.from(rows, row => row.id);}
 
-test("official Usneseni.cz IDs remain searchable, displayed and linked without aliases", async () => {
+test("official prefixed IDs remain searchable, displayed and linked without aliases", async () => {
   const records = [
     {id: "UZ-12-1/26", organ: "Zastupitelstvo města Litovel", datum: "2026-11-02", actions: ["schvaluje"], subject: "opravu školy"},
     {id: "UZ-13-1/26", organ: "Zastupitelstvo města Litovel", datum: "2026-11-02", actions: ["schvaluje"], subject: "pronájem pozemku"},
