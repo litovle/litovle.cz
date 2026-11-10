@@ -65,8 +65,8 @@ právě hledaný výraz. Tabulka je samostatná pro každý soubor a nezávisí 
 záznamů v ročních datech.
 
 Oficiální čísla usnesení se zachovávají ve zdrojovém tvaru. Formáty `RM/...`
-a `ZM/...` i jejich URL jsou podporované společně s `UR-…` a `UZ-…`
-z Usnesení.cz. Stejné číslo se používá v hledání, na stránce usnesení,
+a `ZM/...` i jejich URL jsou podporované společně s `UR-…` a `UZ-…`.
+Stejné číslo se používá v hledání, na stránce usnesení,
 v metadatech i v odkazech mezi rozhodnutími. Orgán, číslo jednání a celý rok
 pro členění stránek z něj čte společný `usneseni/resolution-id.js`.
 
