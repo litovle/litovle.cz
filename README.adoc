@@ -70,6 +70,12 @@ Stejné číslo se používá v hledání, na stránce usnesení,
 v metadatech i v odkazech mezi rozhodnutími. Orgán, číslo jednání a celý rok
 pro členění stránek z něj čte společný `usneseni/resolution-id.js`.
 
+Data tabulkových usnesení obsahují také `voting` s počty hlasů pro, proti
+a zdržel se, dostupnými jmény hlasujících a původním textem hlasování.
+U kladného počtu bez jmen má seznam `voters` hodnotu `null`; uvedenému
+nulovému počtu odpovídá prázdný seznam. Podrobnou strukturu popisuje
+dokumentace datové pipeline.
+
 Více informací:
 https://github.com/litovle/usneseni-mesta
 
