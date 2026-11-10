@@ -14,26 +14,7 @@ permalink: /rozpoctova-opatreni/RO-14-2025/
   <a href="/rozpoctova-opatreni/" id="back-link">← Zpět na rozpočtová opatření</a>
 </p>
 
-<script>
-(function() {
-  const a = document.getElementById("back-link");
-  if (!a) return;
-
-  const back = new URLSearchParams(location.search).get("back");
-  try {
-    const url = new URL(back, location.origin);
-    if (
-      url.origin === location.origin &&
-      (url.pathname === "/usneseni" || url.pathname.startsWith("/usneseni/") || url.pathname === "/rozpoctova-opatreni" || url.pathname.startsWith("/rozpoctova-opatreni/"))
-    ) {
-      a.href = url.pathname + url.search;
-      a.textContent = "← Zpět na vyhledávání";
-    }
-  } catch (e) {
-    // ignoruj rozbité hodnoty
-  }
-})();
-</script>
+<script src="/usneseni/back-link.js" defer data-back-prefixes="/usneseni /rozpoctova-opatreni"></script>
 
 <header class="usn-ro-hero">
 <p class="usn-ro-kicker">Rozpočet města</p>

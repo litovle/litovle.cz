@@ -97,6 +97,13 @@ node --test tests/*.test.cjs
 Datové exporty a front matter stránek vznikají v `usneseni-mesta`; ruční úpravy
 vygenerovaných kategorií při dalším běhu pipeline přepíše export.
 
+Tlačítko pro návrat nahoru obsluhuje společný `assets/js/site.js`, načítaný výchozím
+layoutem. Odkazy pro návrat z detailu usnesení, archivu a rozpočtových opatření
+obsluhuje `usneseni/back-link.js`; odkaz na tento soubor generuje exportér
+v `usneseni-mesta`. Parametr `back` přijímá pouze adresy stejného webu v povolených
+sekcích; další sekce určuje atribut `data-back-prefixes` na značce skriptu.
+Bez platného parametru zůstává zachován výchozí odkaz z exportu.
+
 == IndexNow
 
 Po úspěšném publikování na GitHub Pages spouští `.github/workflows/indexnow.yml`
