@@ -685,3 +685,55 @@ test("clearing an outcome preserves the query and topic", async () => {
   assert.equal(node("usn-topics").hidden, true);
   assert.equal(new URLSearchParams(context.location.search).has("outcome"), false);
 });
+
+
+test("agenda-only matches are searchable, highlighted and linked to the original heading", async () => {
+  const records = [
+    {id: "UR-28-1/26", organ: "RM", datum: "2026-11-12", agenda_title: "Budoucnost školy Nasobůrky", actions: ["schvaluje"], subject: "soukromou školu"},
+    {id: "RM/1/1/2026", organ: "RM", datum: "2026-01-01", subject: "program jednání"},
+  ];
+  const {api, payloads} = app("", "Nasobůrky", records);
+  payloads["/assets/usneseni/index/2026.json"] = {ids: records.map(r => r.id), tokens: {nasoburky: [0]}};
+  const query = api.parseQuery("Nasobůrky");
+  const results = await api.findResults(query);
+  assert.deepEqual(ids(results), ["UR-28-1/26"]);
+  const card = api.renderResultCard(results[0], query).innerHTML;
+  assert.match(card, /class="usn-agenda-title"/);
+  assert.match(card, /<mark>Nasobůrky<\/mark>/);
+  assert.match(card, /#bod-programu/);
+  assert.match(card, /soukromou školu/);
+  assert.doesNotMatch(api.renderResultCard(records[1]).innerHTML, /usn-agenda-title/);
+  const escaped = api.renderResolutionPreview({...records[0], agenda_title: '<img src=x> & "škola"'});
+  assert.match(escaped, /&lt;img src=x&gt; &amp; &quot;škola&quot;/);
+  assert.doesNotMatch(escaped, /<img/);
+});
+
+test("agenda context remains searchable with explicit outcome filters", async () => {
+  const records = [
+    {id: "UR-28-1/26", organ: "RM", datum: "2026-11-12", agenda_title: "Budoucnost školy Nasobůrky", items: [{label: "a", text: "neschvaluje soukromou školu"}]},
+    {id: "UR-29-1/26", organ: "RM", datum: "2026-11-12", agenda_title: "Neschválení jiného záměru", actions: ["schvaluje"], subject: "program jednání"},
+  ];
+  const {api, node, payloads} = app("", "Nasobůrky", records);
+  payloads["/assets/usneseni/index/2026.json"] = {ids: records.map(r => r.id), tokens: {nasoburky: [0]}};
+  node("usn-outcome").value = "rejected";
+  const query = api.parseQuery("Nasobůrky");
+  assert.deepEqual(ids(await api.findResults(query)), ["UR-28-1/26"]);
+  const card = api.renderResultCard(records[0], query).innerHTML;
+  assert.match(card, /neschvaluje soukromou školu/);
+  assert.match(card, /#bod-programu/);
+});
+
+
+test("a recommendation governing an item list remains visible and links to its introduction", () => {
+  const {api} = app();
+  const record = {id: "UR-3-1/26", datum: "2026-11-12", actions: ["doporučuje"], subject: "Zastupitelstvu města Litovel", items: [
+    {label: "a", text: "schválit záměr prodeje pozemku"},
+    {label: "b", text: "jmenovat komisi"},
+  ]};
+  const ordinary = api.renderResolutionPreview(record);
+  assert.match(ordinary, /doporučuje Zastupitelstvu města Litovel/);
+  assert.match(ordinary, /schválit záměr prodeje pozemku/);
+  const card = api.renderResultCard(record, api.parseQuery("doporučuje")).innerHTML;
+  assert.match(card, /<mark>doporučuje<\/mark> Zastupitelstvu města Litovel/);
+  assert.match(card, /#predmet/);
+});

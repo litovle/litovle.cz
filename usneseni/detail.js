@@ -88,7 +88,7 @@
     body.querySelectorAll("mark[data-usn-match]").forEach(mark => mark.replaceWith(...mark.childNodes));
     body.querySelectorAll(".is-search-target").forEach(node => node.classList.remove("is-search-target"));
     const anchor = location.hash.slice(1);
-    if (!/^(predmet|bod-[1-9]\d*|dovetek)$/.test(anchor)) return;
+    if (!/^(bod-programu|predmet|bod-[1-9]\d*|dovetek)$/.test(anchor)) return;
     const target = document.getElementById(anchor);
     if (!target || !body.contains(target)) return;
     const match = markMatches(target, searchQuery());

@@ -26,7 +26,7 @@
   }
 
   function partText(record, part) {
-    return normalize([record.id || "", part.index === null ? "" : record.subject || "", part.text || ""].join(" "));
+    return normalize([record.id || "", record.agenda_title || "", part.index === null ? "" : record.subject || "", part.text || ""].join(" "));
   }
 
   function references(record, key) {
