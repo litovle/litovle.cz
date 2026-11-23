@@ -192,6 +192,7 @@
     return normalize(
       [
         ...(u.actions || []),
+        u.agenda_title || "",
         u.subject || "",
         ...(u.items || []).map(i => i.text),
         u.tail || "",
@@ -963,10 +964,12 @@
     const matchedItems = scoredItems.filter(part => part.score && part.score === bestScore).map(part => part.item);
     const subjectMatch = terms.length && previews.ranges(u.subject, terms).length;
     const tailMatch = terms.length && previews.ranges(u.tail, terms).length;
-    const actionMatch = !u.items?.length && terms.length && previews.ranges((u.actions || []).join(" "), terms).length;
+    const actionMatch = (!u.items?.length || u.subject) && terms.length && previews.ranges((u.actions || []).join(" "), terms).length;
     const subjectScore = terms.length ? score(u.subject) : 0;
     const tailScore = terms.length ? score(u.tail) : 0;
-    const anchor = subjectScore > bestScore && subjectScore >= tailScore ? "predmet"
+    const agendaScore = terms.length ? score(u.agenda_title) : 0;
+    const anchor = agendaScore > Math.max(bestScore, subjectScore, tailScore) ? "bod-programu"
+      : subjectScore > bestScore && subjectScore >= tailScore ? "predmet"
       : tailScore > bestScore ? "dovetek" : matchedItems.length ? `bod-${matchedItems[0].index + 1}`
       : subjectMatch ? "predmet"
       : tailMatch ? "dovetek" : actionMatch && u.subject ? "predmet" : outcome && items.length ? `bod-${items[0].index + 1}`
@@ -983,7 +986,9 @@
     const preview = text => highlight(terms.length ? previews.snippet(text, terms, SNIPPET_LEN, phrase) : truncatePreview(text), terms);
     const pointLink = (anchor, text) => linkPoints
       ? `<a class="usn-point-link" href="${escapeHtml(hrefFromRecord(u, anchor))}">${text}</a>` : text;
-    if (u.subject) parts.push(`<div class="usn-snippet">${pointLink("predmet", preview(u.subject))}</div>`);
+    const agendaTitle = (u.agenda_title || "").trim();
+    if (agendaTitle) parts.unshift(`<div class="usn-agenda-title"><strong>${pointLink("bod-programu", highlight(agendaTitle, terms))}</strong></div>`);
+    if (u.subject) parts.push(`<div class="usn-snippet">${pointLink("predmet", (u.items?.length && u.actions?.length === 1 ? highlight(u.actions[0], terms) + " " : "") + preview(u.subject))}</div>`);
     if (items.length) {
       const itemPreviews = items.slice(0, 3).map(item => {
         const label = String(item.label || "");

@@ -66,6 +66,7 @@
 :is(.usn-app, .usn-section) .usn-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .3rem .7rem; }
 :is(.usn-app, .usn-section) .usn-head strong { color: var(--brand-blue); font-size: var(--text-body); }
 :is(.usn-app, .usn-section) :is(.usn-date, .usn-summary) { font-size: var(--text-small); color: var(--text-muted); font-style: normal; }
+:is(.usn-app, .usn-section) .usn-agenda-title { margin: .4rem 0; font-size: var(--text-body); line-height: 1.4; }
 :is(.usn-app, .usn-section) .usn-summary { margin: .3rem 0; }
 :is(.usn-app, .usn-section) .usn-snippet {
   display: -webkit-box;
